@@ -1,0 +1,5 @@
+CREATE TABLE stockupdatelist (
+	stock CHARACTER VARYING(10) NOT NULL, 
+	attempted_update_dtm TIMESTAMP(6) WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP, 
+	PRIMARY KEY (stock)
+);

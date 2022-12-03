@@ -1,0 +1,13 @@
+CREATE TABLE recommendations (dtm TIMESTAMP(6) WITHOUT TIME ZONE, 
+stock CHARACTER VARYING(10) NOT NULL, 
+log_dt DATE NOT NULL, 
+firm CHARACTER VARYING(150) NOT NULL, 
+to_grade CHARACTER VARYING(100) NOT NULL, 
+from_grade CHARACTER VARYING(100) NOT NULL, 
+action CHARACTER VARYING(100) NOT NULL, 
+PRIMARY KEY (stock, 
+log_dt, 
+firm, 
+to_grade, 
+from_grade, 
+action));
