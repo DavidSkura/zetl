@@ -1,46 +1,55 @@
 """
   Dave Skura, 2022
 """
+import sys
 import psycopg2 
-import socket
+from dbvars import dbinfo
 
 class db:
 	def __init__(self):
 		self.version=1.0
-		self.dir_install = 'D:\\nfl'
-		self.updated='Aug 29/22'
-		self.database_hostname = 'localhost'
-		self.database_ip_address = socket.gethostbyname(self.database_hostname)
-
+		
 		# ***** edit these DB credentials for the installation to work *****
-		self.idb='nfl'
-		self.ihost= self.database_hostname # self.database_ip_address # '192.168.0.110' #'megapc' 
-		self.iport="5432"
-		#self.ischema='_raw'
-		self.iuser='dad'
-		self.ipwd='dad'
-		self.connection_str = self.ihost + ':' + self.iport + ', database=' + self.idb + ', using ' + self.iuser + '/' + self.ipwd + '\n'
+		self.ihost = dbinfo().DB_HOST				# 'localhost'
+		self.iport = dbinfo().DB_PORT				#	"5432"
+		self.idb = dbinfo().DB_NAME					# 'nfl'
+		self.ischema = dbinfo().DB_SCHEMA		#	'_raw'
+		self.iuser = dbinfo().DB_USERNAME		#	'dad'
+		self.ipwd = dbinfo().DB_USERPWD			#	'dad'
+		self.connection_str = dbinfo().dbconnectionstr
 
-		self.showsql = True
+		self.dbconn = None
+		self.cur = None
+
 
 	def close(self):
-		self.db.close()
+		if self.dbconn:
+			self.dbconn.close()
 
 	def connect(self):
-
-		self.db = psycopg2.connect(
-				host=self.ihost,
-				database=self.idb,
-				user=self.iuser,
-				password=self.ipwd
-				#autocommit=True
-		)
-
-		self.cur = self.db.cursor()
-		self.db.set_session(autocommit=True)
+		try:
+			self.dbconn = psycopg2.connect(
+					host=self.ihost,
+					database=self.idb,
+					user=self.iuser,
+					password=self.ipwd
+					#autocommit=True
+			)
+			self.dbconn.set_session(autocommit=True)
+			self.cur = self.dbconn.cursor()
+		except:
+			raise Exception("Unable to connect to the database.")
 
 	def execute(self,qry):
 		self.cur.execute(qry)
+
+	def queryone(self,select_one_fld):
+		try:
+			self.execute(select_one_fld)
+			retval=self.cur.fetchone()
+			return retval[0]
+		except:
+			raise Exception("Query failed:\n\n" + select_one_fld)
 
 	def query_to_file(self,qry,csv_filename):
 		self.cur.execute(qry)
@@ -57,37 +66,18 @@ class db:
 
 			f.write(sz[:-1] + '\n')
 				
-	def sql_to_html(self,sql):
-		self.connect()
-		self.cur.execute(sql)
-		self.colcount = len(self.cur.description)
-		self.data = self.cur.fetchall()
 
-		hdr = """<TABLE class ="normal"><TR class ="normal">"""
-		for k in [i[0] for i in self.cur.description]:
-			col = '<font color=blue>' + k + '</font>'
-			hdr += '<TD  class ="normal">' + col + ' </TD>'
+if len(sys.argv) == 1 or sys.argv[1] == 'zetl.py':
+	try:
+		print('Testing connection: ' + db().connection_str)
+		zetldb = db()
+		zetldb.connect()
+		x = zetldb.queryone('SELECT version()')
+		print(x)
+		zetldb.close()
+		sys.exit(0)
 
-		hdr + '</TR>'
-
-		trows = ''
-		for row in self.data :
-
-			trows += '<TR class ="normal">'
-			for i in range(0,self.colcount):
-				cellvalue = str(row[i])
-				trows += '<TD class ="normal">'
-				if cellvalue != 'None':
-					trows += cellvalue
-				trows += '</TD>'
-
-			trows += '</TR>'
-
-
-		ftr = '</TABLE>'
-		self.close()
-		if self.showsql:
-			return "<TABLE><TR><TD>" + hdr + trows + ftr + "</TD><TD valign=top align=left><pre>" + sql + "</PRE></TD></TR></TABLE>"
-		else:
-			return hdr + trows + ftr 
+	except Exception as e:
+		print(str(e))
+		sys.exit(1)
 
