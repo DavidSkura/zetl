@@ -14,6 +14,8 @@ class db:
 		self.iport = dbinfo().DB_PORT				#	"5432"
 		self.idb = dbinfo().DB_NAME					# 'nfl'
 		self.ischema = dbinfo().DB_SCHEMA		#	'_raw'
+		if self.ischema == '':
+			self.ischema = 'Public'
 		self.iuser = dbinfo().DB_USERNAME		#	'dad'
 		self.ipwd = dbinfo().DB_USERPWD			#	'dad'
 		self.connection_str = dbinfo().dbconnectionstr
@@ -21,6 +23,26 @@ class db:
 		self.dbconn = None
 		self.cur = None
 
+	def does_table_exist(self,tblname):
+		# tblname may have a schema prefix like public.sales
+		#		or not... like sales
+
+		this_schema = tblname.split('.')[0]
+		try:
+			this_table = tblname.split('.')[1]
+		except:
+			this_schema = self.ischema
+			this_table = tblname.split('.')[0]
+
+		sql = """
+			SELECT count(*)  
+			FROM information_schema.tables
+			WHERE table_schema = '""" + this_schema + """' and table_name='""" + this_table + "'"
+
+		if self.queryone(sql) == 0:
+			return False
+		else:
+			return True
 
 	def close(self):
 		if self.dbconn:
@@ -39,6 +61,14 @@ class db:
 			self.cur = self.dbconn.cursor()
 		except Exception as e:
 			raise Exception(str(e))
+
+	def query(self,qry):
+		if not self.dbconn:
+			self.connect()
+
+		self.cur.execute(qry)
+		all_rows_of_data = self.cur.fetchall()
+		return all_rows_of_data
 
 	def execute(self,qry):
 		self.cur.execute(qry)

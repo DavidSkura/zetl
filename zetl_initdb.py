@@ -9,17 +9,14 @@ zetldb = db()
 
 zetl_tables_required = ['z_etl','z_log','z_etl_dependencies','z_control','z_etl_running','z_activity']
 
+
 def	createtables(tables_list):
 	zetldb.connect()
 	for i in range(0,len(tables_list)):
 		print('Looking for table: ' + tables_list[i])
-		sql = """
-			SELECT count(*)  
-			FROM information_schema.tables
-			WHERE table_schema = '""" + zetldb.ischema + """' and table_name='""" + tables_list[i] + "'"
-		table_count = zetldb.queryone(sql)
 
-		if table_count == 0:
+		if not zetldb.does_table_exist(tables_list[i]):
+
 			print(tables_list[i] + ' Not Found.')
 			DDLFile = '.\\install_ddl\\' + tables_list[i] + '.ddl'
 			print('Creating from ' + DDLFile)
@@ -38,7 +35,7 @@ def	createtables(tables_list):
 				raise Exception('cannot create tables.  ' + str(e))
 
 		else:
-			print(tables_list[i] + ' Found with ' + str(table_count) + ' rows.')
+			print(tables_list[i] + ' Found.')
 				
 	zetldb.close()
 

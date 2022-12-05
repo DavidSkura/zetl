@@ -1,53 +1,143 @@
 """
-  Dave Skura, Dec,2022
+  Dave Skura, May 3,2019
 """
-from zetl_utility_functions import zetlfn
-from postgresdatabase import db
-
-import psycopg2 
+VERSION=191029
+import mysql.connector
+from mysqldatabase import db
+from zetl_config import variables
+from zetl_config import dbinfo
 
 import warnings
 import sys
 import os
 import re
+from etl_classes import etl_step, etl_job
+from DaveMath import davemath,resultset
 from datetime import *
 now = (datetime.now())
-sztoday=str(now.year) + '-' + ('0' + str(now.month))[-2:] + '-' + str(now.day)
-variable_dictionary	= {}
 
-zetldb = db()
+sztoday=str(now.year) + '-' + ('0' + str(now.month))[-2:] + '-' + str(now.day)
+
+x = etl_job()
+
 
 if len(sys.argv) == 1 or sys.argv[1] == 'zetl.py':
-	print("zetl.py accepts parameters such as an etl_name found in '" + zetldb.idb + '.' + zetldb.ischema + ".z_etl'")
-	data = zetldb.query('SELECT distinct etl_name from ' + zetldb.ischema + '.z_etl order by etl_name')
+	print("\nUsage: zetl.py <etl_name>")
+	print("	eg. zetl.py main")
+	print("	")
+	print("to run during *hold* do this: \n")
+	print("zetl.py <etl_name> -f ")
+	print("	")
+	print("for html output do this: \n")
+	print("zetl.py <etl_name> html ")
+
+	RowsReturned = x.cur.execute('SELECT distinct etl_name from _zetl.z_etl order by etl_name')
+	data=x.cur.fetchall()
 	for row in data:
 		print(' ' + row[0])
 	sys.exit()
 
-else: # run the etl match the etl_name in the etl table
-	print(sys.argv[1])
+force_run = False
+argv3 = ''
+Arg_etl_name_or_num = sys.argv[1]
+output_html = False
+if len(sys.argv) > 2: # at least 2 parms
+	argv2 = sys.argv[2]
+	output_html = False
+	if argv2.lower().strip() == 'html':
+		output_html = True
+		# generate html
+		if len(sys.argv) > 3: 
+			argv3 = sys.argv[3]
+	elif argv2.lower().strip() == '-f':
+		force_run = True
 
+	else:
+		if len(sys.argv) > 3: # if there is a third parm it's a date
+			argv3 = sys.argv[3]
+		else:					# no third parm
+			if len(argv2) < 7:  # if second parm is a stock...
+				argv3 = sztoday # set third parm to today
+			else:
+				argv3 = argv3	# else just set it to the same value as 2nd parm
 
-sys.exit(0)
+else:
+	argv2 = sztoday
+	argv3 = sztoday
 
+stock = argv2
+datetorun = argv3
 
+variable_dictionary	= {}
 
+foo = ""
+def f1(foo=foo): return iter(foo.splitlines())
 
-def runetl(etl_job, etl_name,rundtm,output_html):
+def RemoveComments(asql):
+	foundacommentstart = 0
+	foundacommentend = 0
+	ret = ""
 
-	order = []
-	for i in range(1,len(etl_job.steps)):
-		order.append( etl_job.steps[i].stepnum )
-	order.sort()
+	for line in f1(asql):
+		
+		if not line.startswith( '--' ):
+			if line.find('/*') > -1:
+				foundacommentstart += 1
 
-	if order is None:
-		print('etl not found')
+			if line.find('*/') > -1:
+				foundacommentend += 1
+			
+			if foundacommentstart == 0:
+				ret += line + '\n'
 
+			if foundacommentstart > 0 and foundacommentend > 0:
+				foundacommentstart = 0
+				foundacommentend = 0	
 
-	for seq_nbr in order:
-		# print(' running #' + str(seq_nbr))
-		run_one_etl_step(etl_job,etl_name,seq_nbr,rundtm,output_html)
-		#etl_job.dbconn.commit()
+	return ret
+
+def Query(zCur, zsql):
+	RowsReturned = zCur.execute(zsql)
+	R = ""
+	try:
+		data=zCur.fetchall()
+		R = data[0][0]
+	except Exception: 
+		pass
+
+	return R
+
+def f1(foo=foo): return iter(foo.splitlines())
+
+def setvars(multicommandblock):
+	ret = ""
+
+	for line in f1(multicommandblock):
+		if line.upper().startswith('\SET '):
+			for k, v in variable_dictionary.items():
+				line = line.replace(':'+k,v)
+
+			setvar = line.split(' ')
+			varname = setvar[1]
+			varvalue = line[len('\set ') + len(setvar[1]) + 1:].strip()
+			
+			#if varvalue[:1] == varvalue[-1:] and len(varvalue) > 2:
+			#	varvalue = varvalue[1:-1]
+
+			variable_dictionary[varname] = str(varvalue)
+
+		else:
+			ret += line + '\n'
+
+	return ret
+
+def does_table_exist(zCur,tblname):
+	csql = "SELECT count(*) FROM INFORMATION_SCHEMA.tables WHERE lower(table_name) = lower('" + tblname + "')"
+	ichk_table_exists = Query(zCur,csql)
+	if ichk_table_exists == 0:
+		return False
+	else:
+		return True
 
 
 def runit(etl_job, jobtorun,rundtm,output_html):
@@ -204,6 +294,21 @@ def logstepend(cur,job_to_run,query,lid):
 		sys.exit(1) 
 		
 
+def runetl(etl_job, etl_name,rundtm,output_html):
+
+	order = []
+	for i in range(1,len(etl_job.steps)):
+		order.append( etl_job.steps[i].stepnum )
+	order.sort()
+
+	if order is None:
+		print('etl not found')
+
+
+	for seq_nbr in order:
+		# print(' running #' + str(seq_nbr))
+		run_one_etl_step(etl_job,etl_name,seq_nbr,rundtm,output_html)
+		#etl_job.dbconn.commit()
 
 def compose_sql(sqljob):
 	isql = 'DROP TABLE IF EXISTS ' + sqljob.steptablename + ';\n'
