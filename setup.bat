@@ -6,7 +6,6 @@ REM
 SET zetl_version=1.0
 SET zetl_build_dt=Dec 2/2022
 SET DatabaseType=Postgres
-SET python_database_file=postgresdatabase.py
 
 echo dbvars.py will be overwritten.
 
@@ -75,48 +74,28 @@ GOTO end
 :proceedy1N
 
 echo Checking Database connection
-python.exe %python_database_file% 
+python.exe zetl_initdb.py connection_test
 echo.
 
 if ERRORLEVEL 1 GOTO end
 
-GOTO end
-
 echo Checking database for tables:
 echo.
-python.exe python_helper.py check_tables_exist
+python.exe zetl_initdb.py check_tables_exist
 echo.
 
-echo Do you wish to create the views ?? [1=Yes/2=No]
-CHOICE /C 12 /N /M "Command to run"
-IF ERRORLEVEL 2 GOTO proceedy3N
-IF ERRORLEVEL 1 GOTO proceedy3Y
+if ERRORLEVEL 1 GOTO problems_creating_tables
+
+GOTO good_end
+
+:problems_creating_tables
+echo Problems creating tables for zetl framework.
 GOTO end
 
-:proceedy3Y
-python.exe python_helper.py create_views
-
-:proceedy3N
-
-echo Do you wish to create the functions ?? [1=Yes/2=No]
-CHOICE /C 12 /N /M "Command to run"
-IF ERRORLEVEL 2 GOTO proceedy4N
-IF ERRORLEVEL 1 GOTO proceedy4Y
-GOTO end
-
-:proceedy4Y
-python.exe python_helper.py create_functions
-
-:proceedy4N
-
-:proceedy2Y
-python.exe python_helper.py check_huge_tables_exist
-
-:proceedy2N
-echo done.
-
-
+:good_end
+echo setup complete.
 :end
+
 
 
 

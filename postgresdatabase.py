@@ -37,8 +37,8 @@ class db:
 			)
 			self.dbconn.set_session(autocommit=True)
 			self.cur = self.dbconn.cursor()
-		except:
-			raise Exception("Unable to connect to the database.")
+		except Exception as e:
+			raise Exception(str(e))
 
 	def execute(self,qry):
 		self.cur.execute(qry)
@@ -66,18 +66,4 @@ class db:
 
 			f.write(sz[:-1] + '\n')
 				
-
-if len(sys.argv) == 1 or sys.argv[1] == 'zetl.py':
-	try:
-		print('Testing connection: ' + db().connection_str)
-		zetldb = db()
-		zetldb.connect()
-		x = zetldb.queryone('SELECT version()')
-		print(x)
-		zetldb.close()
-		sys.exit(0)
-
-	except Exception as e:
-		print(str(e))
-		sys.exit(1)
 

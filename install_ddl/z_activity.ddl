@@ -1,4 +1,4 @@
-CREATE TABLE _zetl.activity (
+CREATE TABLE z_activity (
 	currently varchar(250) DEFAULT 'idle', 
 	previously varchar(250) DEFAULT NULL, 
 	keyfld varchar(250) DEFAULT '', 

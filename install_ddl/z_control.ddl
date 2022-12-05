@@ -1,4 +1,4 @@
-CREATE TABLE _zetl.z_control (
+CREATE TABLE z_control (
 	etl_name varchar(100) DEFAULT '', 
 	parameterkey varchar(50) DEFAULT '', 
 	parametervalue varchar(200) DEFAULT '', 
