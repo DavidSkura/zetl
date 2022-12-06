@@ -17,168 +17,87 @@ variable_dictionary	= {}
 
 zetldb = db()
 
+def f1(foo=''): return iter(foo.splitlines())
+
+def RemoveComments(asql):
+	foundacommentstart = 0
+	foundacommentend = 0
+	ret = ""
+
+	for line in f1(asql):
+		
+		if not line.startswith( '--' ):
+			if line.find('/*') > -1:
+				foundacommentstart += 1
+
+			if line.find('*/') > -1:
+				foundacommentend += 1
+			
+			if foundacommentstart == 0:
+				ret += line + '\n'
+
+			if foundacommentstart > 0 and foundacommentend > 0:
+				foundacommentstart = 0
+				foundacommentend = 0	
+
+	return ret
+
+def run_one_etl_step(etl_name,stepnum,steptablename,sqlfile):
+	findsqlfile = '.\\zetl_scripts\\demo\\' + sqlfile
+	try:
+		f = open(findsqlfile,'r') 
+		sqlfromfile = f.read()
+		f.close()
+	except Exception as e:
+		raise Exception('cannot open sql file ' + sqlfile)
+		print(str(e))
+		sys.exit(0)
+
+	sql = RemoveComments(sqlfromfile.strip())
+
+	ipart = 0
+	for individual_query in sql.split(';'):
+		ipart += 1
+		individual_query = individual_query.strip()
+		if not individual_query.isspace() and individual_query != '':
+			print('\nin file ' + sqlfile + ', step ' + str(ipart))
+			print(individual_query)
+			zetldb.execute(individual_query)
+
+def runetl(etl_name):
+	sql = """
+	SELECT stepnum,steptablename,sqlfile 
+	FROM """ + zetldb.ischema + """.z_etl 
+	WHERE etl_name = '""" + etl_name + """'
+	ORDER BY etl_name, stepnum
+	"""
+	#print(sql)
+	data = zetldb.query(sql)
+	for row in data:
+		stepnum = row[0]
+		steptablename = row[1]
+		sqlfile = row[2]
+		#print('stepnum = \t\t' + str(stepnum))
+		#print('steptablename = \t' + steptablename)
+		#print('sqlfile = \t\t' + sqlfile)
+		run_one_etl_step(etl_name,stepnum,steptablename,sqlfile)
+
 if len(sys.argv) == 1 or sys.argv[1] == 'zetl.py':
-	print("zetl.py accepts parameters such as an etl_name found in '" + zetldb.idb + '.' + zetldb.ischema + ".z_etl'")
+	if not zetldb.check_etl_names(): # false means no rows.
+		print("zetl.py accepts parameters such as an etl_name found in '" + zetldb.idb + '.' + zetldb.ischema + ".z_etl'")
+
 	data = zetldb.query('SELECT distinct etl_name from ' + zetldb.ischema + '.z_etl order by etl_name')
 	for row in data:
 		print(' ' + row[0])
 	sys.exit()
 
 else: # run the etl match the etl_name in the etl table
-	print(sys.argv[1])
-
+	etl_name_to_run = sys.argv[1]
+	print('Running ' + etl_name_to_run)
+	runetl(etl_name_to_run)
 
 sys.exit(0)
 
-
-
-
-def runetl(etl_job, etl_name,rundtm,output_html):
-
-	order = []
-	for i in range(1,len(etl_job.steps)):
-		order.append( etl_job.steps[i].stepnum )
-	order.sort()
-
-	if order is None:
-		print('etl not found')
-
-
-	for seq_nbr in order:
-		# print(' running #' + str(seq_nbr))
-		run_one_etl_step(etl_job,etl_name,seq_nbr,rundtm,output_html)
-		#etl_job.dbconn.commit()
-
-
-def runit(etl_job, jobtorun,rundtm,output_html):
-	zCur = etl_job.cur
-	
-	if not (jobtorun.sqlfile is None or jobtorun.sqlfile == ''):
-		etl_job.setsqlfile(jobtorun.sqlfile.split('\\')[len(jobtorun.sqlfile.split('\\'))-1])
-		try:
-			f = open(jobtorun.sqlfile,'r') 
-			jobtorun.sql = f.read()
-			f.close()
-		except Exception as e:
-			print('cannot open sql file ' + jobtorun.sqlfile)
-			print(str(e))
-			sys.exit(0)
-	else:
-		etl_job.setsqlfile('no_sql_file')
-
-	ipart = -1
-	if not jobtorun.sql is None and jobtorun.sql != '':
-		zsql = jobtorun.sql
-		sqltype = 'sql provided'
-	else:
-		zsql = compose_sql(jobtorun)
-		sqltype = 'generated sql'
-	
-	stock=''
-	stgtablename=''
-	arg2=''
-	arg3=''
-	chk_table_exists=''
-	variable_dictionary['output_file'] = ''
-	variable_dictionary['chk_table_exists'] = ''
-	sqlfile = Query(zCur,"SELECT parametervalue FROM _zetl.z_control WHERE parameterkey='sqlfile' and etl_name='zetl'");
-	stock = Query(zCur,"SELECT parametervalue FROM _zetl.z_control WHERE parameterkey='stock' and etl_name='zetl'");
-	arg2 = Query(zCur,"SELECT parametervalue FROM _zetl.z_control WHERE parameterkey='arg2' and etl_name='zetl'");
-	arg3 = Query(zCur,"SELECT parametervalue FROM _zetl.z_control WHERE parameterkey='arg3' and etl_name='zetl'");
-	stgtablename = Query(zCur,"SELECT parametervalue FROM _zetl.z_control WHERE parameterkey='stgtablename' and etl_name='zetl'");
-
-	now = (datetime.now())
-	variable_dictionary['YYYYMMDD'] = str(now.year) + ('0' + str(now.month))[-2:] + str(now.day) 
-
-	if sqlfile.strip() != '':
-		variable_dictionary['sqlfile'] = sqlfile 
-
-	if stock.strip() != '':
-		variable_dictionary['stock'] = stock 
-
-	if arg2.strip() != '':
-		variable_dictionary['arg2'] = arg2 
-
-	if arg3.strip() != '':
-		variable_dictionary['arg3'] = arg3 
-	
-	#	print(stgtablename)
-	# 	sys.exit(0)
-
-	if stgtablename.strip() != '':
-		variable_dictionary['stgtablename'] = stgtablename 
-
-	variable_dictionary['etl_name'] = jobtorun.etl_name
-
-	zsql = setvars(zsql) # get vars from file
-	
-	for k, v in variable_dictionary.items():
-		zsql = zsql.replace(':'+k,v)
-
-	Queries = RemoveComments(zsql.strip())
-
-	if variable_dictionary['output_file'].strip() != '':
-		x.out_to_file = True
-		x.sz_out_filename = variable_dictionary['output_file'].strip()
-		fl = open(x.sz_out_filename,'w')
-		fl.write('')
-		fl.close()
-
-
-	if variable_dictionary['chk_table_exists'].strip() != '':
-		csql = "SELECT count(*) FROM INFORMATION_SCHEMA.tables WHERE lower(table_name) = lower('" + variable_dictionary['chk_table_exists'].strip() + "')"
-		ichk_table_exists = Query(zCur,csql)
-		if ichk_table_exists == 0:
-			print('table does not exist.  Cannot continue.')
-			sys.exit(1)
-		else:
-			print('table exists.')
-
-	for qry in Queries.split(';'):
-		ipart += 1
-		query = qry.strip()
-		if not query.isspace() and query != '':
-
-			lid = logstepstart(zCur,jobtorun,query,ipart,rundtm,sqltype)
-			#etl_job.dbconn.commit()
-
-			try:
-				warnings.filterwarnings("ignore")
-		
-				nbr_rows_returned = zCur.execute(query)
-				nbr_rows_returned = zCur.rowcount
-				if query.strip().lower().find('select') ==0:
-					if x.out_to_file:
-						resultset(zCur).fileit(x.sz_out_filename)
-					else:
-						resultset(zCur).printit()
-
-
-				logstepend(zCur,jobtorun,query,lid)	
-				
-				if jobtorun.steptablename.strip() != '':
-					if does_table_exist(zCur,jobtorun.steptablename):
-						sz = 'UPDATE _zetl.z_log SET rowcount=(SELECT COUNT(*) FROM ' + jobtorun.steptablename +') WHERE id = ' + str(lid)
-					else:
-						sz = 'UPDATE _zetl.z_log SET rowcount=0 WHERE id = ' + str(lid)
-
-					zCur.execute(sz)
-				
-				sz = "UPDATE _zetl.z_log SET rows_affected='" + str(nbr_rows_returned) + "' WHERE id = " + str(lid)
-				zCur.execute(sz)
-				#etl_job.dbconn.commit()
-	
-			except Exception as e:
-				print(query)
-
-				ignore_this = 0
-				# need to set an onerror condition or threshold handler if a single step fails
-
-				errorline = "run_etl.py:" + jobtorun.etl_name + ":" + str(jobtorun.stepnum) + ":runit:Exception:" + str(e)
-				print(errorline)
-				zCur.execute("UPDATE _zetl.z_log SET sql_error = '" + str(errorline).replace("'","").replace('?','')[:255] + "' WHERE id = " + str(lid))
-				#etl_job.dbconn.commit()
-				sys.exit(1) 
 
 def logstepstart(cur,job_to_run,query,ipart,rundtm,sqltype):
 
