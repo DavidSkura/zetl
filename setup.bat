@@ -7,15 +7,9 @@ SET zetl_version=1.0
 SET zetl_build_dt=Dec 2/2022
 SET DatabaseType=Postgres
 
-echo dbvars.py will be overwritten.
-
-echo Do you wish to proceed? [1=Yes/2=No]
-CHOICE /C 12 /N /M "Command to run"
-IF ERRORLEVEL 2 GOTO end
-IF ERRORLEVEL 1 GOTO overwrite_it
-GOTO end
-
-:overwrite_it
+REM *** --------------------------------------------------------- ***
+REM *** Update these variables for your zetl database connection
+REM *** --------------------------------------------------------- ***
 
 SET DB_USERNAME=dave
 SET DB_USERPWD=dave
@@ -23,6 +17,11 @@ SET DB_HOST=localhost
 SET DB_PORT=1532
 SET DB_NAME=postgres
 SET DB_SCHEMA=_keydemo
+
+REM *** --------------------------------------------------------- ***
+REM *** --------------------------------------------------------- ***
+
+
 SET dbconnectionstr=%DB_USERNAME%/%DB_USERPWD%@%DB_HOST%:%DB_PORT%/%DB_NAME%/%DB_SCHEMA%
 
 echo class dbinfo: > dbvars.py

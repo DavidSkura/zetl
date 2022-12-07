@@ -64,6 +64,25 @@ def run_one_etl_step(etl_name,stepnum,steptablename,sqlfile):
 			print(individual_query)
 			zetldb.execute(individual_query)
 
+def get_current_activity():
+	sql = """
+		SELECT *
+		FROM (
+				SELECT currently,activity_type FROM """ + zetldb.ischema + """.z_activity
+				UNION
+				SELECT '' as currently,'default' as activity_type
+				) L
+		ORDER BY 1 desc
+	"""
+	data = zetldb.query(sql)
+
+	if data[0][1] == 'default':
+		return_value = 'idle'
+	else:
+		return_value = data[0][0] 
+
+	return return_value
+
 def runetl(etl_name):
 	sql = """
 	SELECT stepnum,steptablename,sqlfile 
@@ -94,7 +113,19 @@ if len(sys.argv) == 1 or sys.argv[1] == 'zetl.py':
 else: # run the etl match the etl_name in the etl table
 	etl_name_to_run = sys.argv[1]
 	print('Running ' + etl_name_to_run)
-	runetl(etl_name_to_run)
+	activity = get_current_activity()
+	if activity == 'idle':
+		zetldb.execute('DELETE FROM ' + zetldb.ischema + '.z_activity')
+		zetldb.execute("INSERT INTO " + zetldb.ischema + ".z_activity(currently,previously) VALUES ('Running " + etl_name_to_run + "','" + activity + "')")
+
+		runetl(etl_name_to_run)
+
+		zetldb.execute("UPDATE " + zetldb.ischema + ".z_activity SET currently = 'idle',previously='Running " + etl_name_to_run + "'")
+		zetldb.dbconn.commit()
+
+	else:
+		print("zetl is currently busy with '" + activity + "'")
+
 
 sys.exit(0)
 
@@ -122,111 +153,4 @@ def logstepend(cur,job_to_run,query,lid):
 		print(str(e))
 		sys.exit(1) 
 		
-
-
-def compose_sql(sqljob):
-	isql = 'DROP TABLE IF EXISTS ' + sqljob.steptablename + ';\n'
-	isql += 'CREATE TABLE ' + sqljob.steptablename + ' AS \n'
-	isql += 'SELECT '
-	if not sqljob.groupbyfield1 is None: isql += '\t' + str(sqljob.groupbyfield1) + ', '
-	if not sqljob.groupbyfield2 is None: isql += str(sqljob.groupbyfield2) + ', '
-	if not sqljob.groupbyfield3 is None: isql += str(sqljob.groupbyfield3) + ', '
-	if not sqljob.groupbyfield4 is None: isql += str(sqljob.groupbyfield4) + ', '
-	if not sqljob.groupbyfield5 is None: isql += str(sqljob.groupbyfield5) + ', '
-
-	if not sqljob.aggfield1 is None: isql +=  str(sqljob.aggfield1)  + ', '
-	if not sqljob.aggfield2 is None: isql +=  str(sqljob.aggfield2)  + ', '
-	if not sqljob.aggfield3 is None: isql +=  str(sqljob.aggfield3)  + ', '
-	if not sqljob.aggfield4 is None: isql +=  str(sqljob.aggfield4)  + ', '
-	if not sqljob.aggfield5 is None: isql +=  str(sqljob.aggfield5)  + ', '
- 
-	if not sqljob.countfield1 is None: isql +=  str(sqljob.countfield1)  + ', '
-	if not sqljob.countfield2 is None: isql +=  str(sqljob.countfield2)  + ', '
-	if not sqljob.countfield3 is None: isql +=  str(sqljob.countfield3)  + ', '
-	if not sqljob.countfield4 is None: isql +=  str(sqljob.countfield4)  + ', '
-	if not sqljob.countfield5 is None: isql +=  str(sqljob.countfield5)  + ', '
-	isql = isql.strip()[:-1]
-
-	isql += '\nFROM \n'
-	if not sqljob.innerjoin1 is None: isql += '\t' + str(sqljob.innerjoin1) + '\n'
-	if not sqljob.innerjoin2 is None: isql += '\t' + str(sqljob.innerjoin2) + '\n'
-	if not sqljob.innerjoin3 is None: isql += '\t' + str(sqljob.innerjoin3) + '\n'
-	if not sqljob.innerjoin4 is None: isql += '\t' + str(sqljob.innerjoin4) + '\n'
-	if not sqljob.innerjoin5 is None: isql += '\t' + str(sqljob.innerjoin5) + '\n'
-	if not sqljob.leftjoin1 is None: isql += '\t' + str(sqljob.leftjoin1) + '\n'
-	if not sqljob.leftjoin2 is None: isql += '\t' + str(sqljob.leftjoin2) + '\n'
-	if not sqljob.leftjoin3 is None: isql += '\t' + str(sqljob.leftjoin3) + '\n'
-	if not sqljob.leftjoin4 is None: isql += '\t' + str(sqljob.leftjoin4) + '\n'
-	if not sqljob.leftjoin5 is None: isql += '\t' + str(sqljob.leftjoin5) + '\n'
-	if not sqljob.whereclause is None: isql += '\t' + str(sqljob.whereclause) + '\n'
-
-	if not sqljob.groupbyfield1 is None:
-		isql += '\nGROUP BY ' + str(sqljob.groupbyfield1) + ', '
-		if not sqljob.groupbyfield2 is None: isql += str(sqljob.groupbyfield2) + ', '
-		if not sqljob.groupbyfield3 is None: isql += str(sqljob.groupbyfield3) + ', '
-		if not sqljob.groupbyfield4 is None: isql += str(sqljob.groupbyfield4) + ', '
-		if not sqljob.groupbyfield5 is None: isql += str(sqljob.groupbyfield5) + ', '
-		isql = isql.strip()[:-1]
-
-	isql += ';'
-
-	return isql
-
-def run_one_etl_step(etl_job,etl_name,stepnum,rundtm,output_html):
-
-	found_step_at_i = -1
-	for i in range(1,len(etl_job.steps)):
-		if etl_job.steps[i].stepnum == stepnum:
-			found_step_at_i = i
-		
-	if found_step_at_i == -1:
-		print('step not found in ' + etl_name)
-		sys.exit(1)
-	else:
-		job_to_run = etl_job.steps[found_step_at_i]
-
-	runit(etl_job,job_to_run,rundtm,output_html)
-	
-
-x.load_etl_job_details(Arg_etl_name_or_num)
-if x.loaded==0:
-	sys.exit(1)
-x.setstock(stock)
-x.setparam(argv2,argv3)
-
-rundtm = Query(x.cur,'SELECT CURRENT_TIMESTAMP')
-
-dbstatus = Query(x.cur,'SELECT currently FROM _zetl.activity')
-dbcurkeyfld = Query(x.cur,'SELECT keyfld FROM _zetl.activity')
-if ((dbstatus.find('*hold') > -1) and (force_run==False)):
-	print(' currently ' + dbstatus + ' in Activity.  Not doing anything else right now.')
-else:
-	noheader=0
-	if len(x.steps) > 1:
-		if x.steps[1].note is not None: 
-			if x.steps[1].note.lower().strip().find('no header') > -1:
-				noheader=1
-
-	if noheader == 0:
-		print('Running etl ' + Arg_etl_name_or_num + ', for user ' +  os.getenv('username', 'not found') + ', at ' + str(rundtm))
-
-	runetl(x,Arg_etl_name_or_num,rundtm,output_html)
-
-	if x.out_to_file:
-		f = open(x.sz_out_filename,'r')
-		data = f.read()
-		f.close()
-		print(data)
-	
-	dbpreviousstatus = Query(x.cur,'SELECT currently FROM _zetl.activity')
-	dbprevkeyfld = Query(x.cur,'SELECT keyfld FROM _zetl.activity')
-
-	uSQL="UPDATE _zetl.activity SET currently = '" + dbstatus + "', previously='" + dbpreviousstatus + "',keyfld='" + dbcurkeyfld + "',prvkeyfld='" + dbprevkeyfld + "',dtm=CURRENT_TIMESTAMP"
-	x.cur.execute(uSQL)
-
-	x.cur.close()
-	#x.dbconn.close()
-
-sys.exit(0)
-
 
