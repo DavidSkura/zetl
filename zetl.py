@@ -13,9 +13,31 @@ import re
 from datetime import *
 now = (datetime.now())
 sztoday=str(now.year) + '-' + ('0' + str(now.month))[-2:] + '-' + str(now.day)
-variable_dictionary	= {}
+
+force = True
 
 zetldb = db()
+
+def logstepstart(etl_name,stepnum,sqlfile,steptablename,query,ipart):
+
+	zsql = "INSERT INTO " + zetldb.ischema + ".z_log (etl_name,dbuser,stepnum,sqlfile,steptablename,"
+	zsql += "sql_to_run,part,rundtm) VALUES ('" + etl_name + "',(SELECT current_user),"
+	zsql += str(stepnum) + ",'" + str(sqlfile) + "','" + steptablename + "','" 
+	zsql += query.replace('?','').replace("'","`") + "'," + str(ipart) + ", CURRENT_TIMESTAMP);"
+	zetldb.execute(zsql)
+	
+	lid = zetldb.queryone("SELECT max(id) FROM " + zetldb.ischema + ".z_log ")
+	return lid
+
+def logstepend(lid,the_rowcount):
+	
+	usql = "UPDATE  " + zetldb.ischema + ".z_log SET rowcount = " + str(the_rowcount) + ", endtime = CURRENT_TIMESTAMP WHERE id = " + str(lid) 
+	try:
+		zetldb.execute(usql)
+	except Exception as e:
+		print(str(e))
+		sys.exit(1) 
+
 
 def f1(foo=''): return iter(foo.splitlines())
 
@@ -62,7 +84,22 @@ def run_one_etl_step(etl_name,stepnum,steptablename,sqlfile):
 		if not individual_query.isspace() and individual_query != '':
 			print('\nin file ' + sqlfile + ', step ' + str(ipart))
 			print(individual_query)
+
+			lid = logstepstart(etl_name,stepnum,sqlfile,steptablename,individual_query,ipart)
+
 			zetldb.execute(individual_query)
+			if zetldb.does_table_exist(steptablename):
+				this_schema = steptablename.split('.')[0]
+				try:
+					this_table = steptablename.split('.')[1]
+				except:
+					this_schema = self.ischema
+					this_table = steptablename.split('.')[0]
+				qualified_table = this_schema + '.' + this_table
+
+				tblrowcount = zetldb.queryone("SELECT COUNT(*) FROM " + qualified_table)
+
+				logstepend(lid,tblrowcount)
 
 def get_current_activity():
 	sql = """
@@ -114,7 +151,7 @@ else: # run the etl match the etl_name in the etl table
 	etl_name_to_run = sys.argv[1]
 	print('Running ' + etl_name_to_run)
 	activity = get_current_activity()
-	if activity == 'idle':
+	if activity == 'idle' or force:
 		zetldb.execute('DELETE FROM ' + zetldb.ischema + '.z_activity')
 		zetldb.execute("INSERT INTO " + zetldb.ischema + ".z_activity(currently,previously) VALUES ('Running " + etl_name_to_run + "','" + activity + "')")
 
@@ -130,27 +167,5 @@ else: # run the etl match the etl_name in the etl table
 sys.exit(0)
 
 
-def logstepstart(cur,job_to_run,query,ipart,rundtm,sqltype):
-
-	zsql = "INSERT INTO _zetl.z_log (etl_name,dbuser,stepnum,sqlfile,steptablename,"
-	zsql += "table_or_view,line,sql_to_run,part,rundtm) VALUES ('" + job_to_run.etl_name + "',(SELECT current_user),"
-	zsql += str(job_to_run.stepnum) + ",'" + str(job_to_run.sqlfile).replace("\\","\\\\") + "','" + job_to_run.steptablename + "','" 
-	zsql += job_to_run.table_or_view + "','" + sqltype + "','"
-	zsql += query.replace('?','').replace("'","`") + "'," + str(ipart) + ", '" + str(rundtm) + "');"
-	Query(cur,zsql)
-	
-	usql = "SELECT max(id) FROM _zetl.z_log WHERE endtime is null and etl_name = '" + job_to_run.etl_name + "' and stepnum= " + str(job_to_run.stepnum)
-	lid = Query(cur,usql)	
-
-	return lid
-
-def logstepend(cur,job_to_run,query,lid):
-	
-	usql = "UPDATE _zetl.z_log SET endtime = CURRENT_TIMESTAMP WHERE id = " + str(lid) 
-	try:
-		Query(cur,usql)
-	except Exception as e:
-		print(str(e))
-		sys.exit(1) 
 		
 
