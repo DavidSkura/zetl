@@ -7,7 +7,7 @@ import sys
 
 zetldb = db()
 
-zetl_tables_required = ['z_etl','z_etl_stage','z_log','z_activity']
+zetl_tables_required = ['z_etl','z_log','z_activity']
 
 
 def	createtables(tables_list):

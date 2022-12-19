@@ -11,12 +11,12 @@ REM *** --------------------------------------------------------- ***
 REM *** Update these variables for your zetl database connection
 REM *** --------------------------------------------------------- ***
 
-SET DB_USERNAME=dave
-SET DB_USERPWD=dave
+SET DB_USERNAME=zetluser
+SET DB_USERPWD=zetluser
 SET DB_HOST=localhost
 SET DB_PORT=1532
-SET DB_NAME=postgres
-SET DB_SCHEMA=_keydemo
+SET DB_NAME=zetl_db
+SET DB_SCHEMA=_zetl
 
 REM *** --------------------------------------------------------- ***
 REM *** --------------------------------------------------------- ***

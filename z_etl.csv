@@ -1,2 +1,0 @@
-etl_name,stepnum,steptablename,sqlfile
-demo,0,_keydemo.sales_total,sales_total.sql

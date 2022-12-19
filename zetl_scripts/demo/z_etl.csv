@@ -1,0 +1,2 @@
+etl_name,stepnum,sqlfile,steptablename,estrowcount
+demo,1.00,1.somethings.sql,,-1

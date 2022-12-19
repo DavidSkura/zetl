@@ -64,21 +64,41 @@ def RemoveComments(asql):
 
 	return ret
 
+def log_sql_error(lid,sql_error):
+
+	usql = "UPDATE  " + zetldb.ischema + ".z_log SET sql_error = '" + sql_error.replace("'","`") + "', endtime = CURRENT_TIMESTAMP WHERE id = " + str(lid) 
+	try:
+		zetldb.execute(usql)
+	except Exception as e:
+		print(str(e))
+
 def run_one_etl_step(etl_name,stepnum,steptablename,sqlfile):
-	findsqlfile = '.\\zetl_scripts\\demo\\' + sqlfile
+
+	script_variables = {'DB_USERNAME':'','DB_USERPWD':'','DB_HOST':'','DB_PORT':'','DB_NAME':'','DB_SCHEMA':''}
+
+	findsqlfile = '.\\zetl_scripts\\' + etl_name + '\\' + sqlfile
 	try:
 		f = open(findsqlfile,'r') 
 		sqlfromfile = f.read()
+
 		f.close()
 	except Exception as e:
 		raise Exception('cannot open sql file ' + sqlfile)
 		print(str(e))
 		sys.exit(0)
 
+	sqllines = sqlfromfile.split('\n')
+	for i in range(0,len(sqllines)):
+		variable_name = sqllines[i].split('=')[0].strip()
+		if (variable_name in script_variables):
+			script_variables[variable_name] = sqllines[i].split('=')[1].strip()
+
 	sql = RemoveComments(sqlfromfile.strip())
 
 	ipart = 0
 	for individual_query in sql.split(';'):
+		newdb = db()
+
 		ipart += 1
 		individual_query = individual_query.strip()
 		if not individual_query.isspace() and individual_query != '':
@@ -87,19 +107,53 @@ def run_one_etl_step(etl_name,stepnum,steptablename,sqlfile):
 
 			lid = logstepstart(etl_name,stepnum,sqlfile,steptablename,individual_query,ipart)
 
-			zetldb.execute(individual_query)
-			if zetldb.does_table_exist(steptablename):
+			try:
+				if script_variables['DB_USERNAME'] != '': # dont use default connection
+					newdb.setvars(script_variables['DB_USERNAME'],
+										script_variables['DB_USERPWD'],
+										script_variables['DB_HOST'],
+										script_variables['DB_PORT'],
+										script_variables['DB_NAME'],
+										script_variables['DB_SCHEMA'])
+				
+					newdb.execute(individual_query)
+					newdb.commit()
+				else: # use default connection
+					zetldb.execute(individual_query)
+			except Exception as e:
+				log_sql_error(lid,str(e))
+
+			if script_variables['DB_USERNAME'] != '': # dont use default connection
+				try:
+					this_table = steptablename.split('.')[1]
+					this_schema = steptablename.split('.')[0]
+				except:
+					if script_variables['DB_SCHEMA'] !='':
+						this_schema = script_variables['DB_SCHEMA']
+					else:
+						this_schema = 'public'
+					this_table = steptablename
+			else: # use default connection
 				this_schema = steptablename.split('.')[0]
 				try:
 					this_table = steptablename.split('.')[1]
 				except:
-					this_schema = self.ischema
+					this_schema = zetldb.ischema
 					this_table = steptablename.split('.')[0]
-				qualified_table = this_schema + '.' + this_table
 
-				tblrowcount = zetldb.queryone("SELECT COUNT(*) FROM " + qualified_table)
+			qualified_table = this_schema + '.' + this_table
+			
+			if script_variables['DB_USERNAME'] != '': # dont use default connection
+				if newdb.does_table_exist(qualified_table):
+					tblrowcount = newdb.queryone("SELECT COUNT(*) FROM " + qualified_table)
+					newdb.close()
+					logstepend(lid,tblrowcount)
 
-				logstepend(lid,tblrowcount)
+			else:# use default connection
+				if zetldb.does_table_exist(qualified_table):
+
+					tblrowcount = zetldb.queryone("SELECT COUNT(*) FROM " + qualified_table)
+					logstepend(lid,tblrowcount)
 
 def get_current_activity():
 	sql = """
@@ -138,18 +192,38 @@ def runetl(etl_name):
 		#print('sqlfile = \t\t' + sqlfile)
 		run_one_etl_step(etl_name,stepnum,steptablename,sqlfile)
 
-if len(sys.argv) == 1 or sys.argv[1] == 'zetl.py':
-	if not zetldb.check_etl_names(): # false means no rows.
-		print("zetl.py accepts parameters such as an etl_name found in '" + zetldb.idb + '.' + zetldb.ischema + ".z_etl'")
 
+def show_etl_name_list():
 	data = zetldb.query('SELECT distinct etl_name from ' + zetldb.ischema + '.z_etl order by etl_name')
 	for row in data:
 		print(' ' + row[0])
-	sys.exit()
+
+if len(sys.argv) == 1 or sys.argv[1] == 'zetl.py': # no parameters
+	print('usage: ')
+	print('zetl.py [etl_name] [-f]') # -f will cause the csv file in the etl path to overwrite the z_etl table.
+	print('')
+
+	zetldb.load_folders_to_zetl()
+	zetldb.export_zetl()
+	show_etl_name_list()
 
 else: # run the etl match the etl_name in the etl table
 	etl_name_to_run = sys.argv[1]
-	print('Running ' + etl_name_to_run)
+	run_options=''
+	run_description = ''
+	if len(sys.argv) == 3:
+		run_options = sys.argv[2]
+		if run_options == '-f':
+			run_description = '  But first, overwriting table ' + zetldb.ischema + '.z_etl with file zetl_scripts\\' + etl_name_to_run + '\\z_etl.csv'
+
+	print('Running ' + etl_name_to_run + '.' + run_description)
+
+	zetldb.load_folders_to_zetl(etl_name_to_run)
+	if run_options == '-f':
+		zetldb.load_z_etlcsv_if_forced(etl_name_to_run,run_options)
+	else:
+		zetldb.export_zetl()
+
 	activity = get_current_activity()
 	if activity == 'idle' or force:
 		zetldb.execute('DELETE FROM ' + zetldb.ischema + '.z_activity')
