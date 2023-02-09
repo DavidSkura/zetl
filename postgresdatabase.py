@@ -133,7 +133,7 @@ class db:
 
 	def export_query_to_string(self,qry,szdelimiter='\t'):
 		self.cur.execute(qry)
-		sqloutput = '' #f = open(csv_filename,'w')
+		sqloutput = '\n' #f = open(csv_filename,'w')
 		sz = ''
 		for k in [i[0] for i in self.cur.description]:
 			sz += k + szdelimiter

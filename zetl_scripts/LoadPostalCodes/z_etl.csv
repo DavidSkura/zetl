@@ -1,0 +1,2 @@
+etl_name,stepnum,sqlfile,steptablename,estrowcount
+LoadPostalCodes,1.00,1.check.sql,,-1
