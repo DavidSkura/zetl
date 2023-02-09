@@ -116,10 +116,19 @@ def run_one_etl_step(etl_name,stepnum,steptablename,sqlfile):
 										script_variables['DB_NAME'],
 										script_variables['DB_SCHEMA'])
 				
-					newdb.execute(individual_query)
-					newdb.commit()
+					if individual_query.strip().upper().find('SELECT') == 0: 
+						print(newdb.export_query_to_string(individual_query))
+					else:
+						newdb.execute(individual_query)
+						newdb.commit()
 				else: # use default connection
-					zetldb.execute(individual_query)
+					if individual_query.strip().upper().find('SELECT') == 0: 
+						print(zetldb.export_query_to_string(individual_query))
+					else:
+						zetldb.execute(individual_query)
+						zetldb.commit()
+				
+
 			except Exception as e:
 				log_sql_error(lid,str(e))
 
@@ -192,16 +201,20 @@ def runetl(etl_name):
 		#print('sqlfile = \t\t' + sqlfile)
 		run_one_etl_step(etl_name,stepnum,steptablename,sqlfile)
 
-
+ 
 def show_etl_name_list():
 	data = zetldb.query('SELECT distinct etl_name from ' + zetldb.ischema + '.z_etl order by etl_name')
 	for row in data:
 		print(' ' + row[0])
 
-if len(sys.argv) == 1 or sys.argv[1] == 'zetl.py': # no parameters
-	print('usage: ')
-	print('zetl.py [etl_name] [-f]') # -f will cause the csv file in the etl path to overwrite the z_etl table.
+if len(sys.argv) == 1 or sys.argv[1] == 'zetl.py' or sys.argv[1] == '-fa': # no parameters
+	print('zetl v2.1\n usage: ')
+	print('zetl.py [etl_name] [-f] [-fa]') # -f will cause the csv file in the etl path to overwrite the z_etl table.
+	# -fa will empty zetl table and refresh from folders and files
 	print('')
+	if sys.argv[1] == '-fa':
+		print( 'truncating table ' + zetldb.ischema + '.z_etl')
+		zetldb.execute('TRUNCATE TABLE ' + zetldb.ischema + '.z_etl')
 
 	zetldb.load_folders_to_zetl()
 	zetldb.export_zetl()

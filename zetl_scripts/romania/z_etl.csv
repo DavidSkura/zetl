@@ -1,2 +1,0 @@
-etl_name,stepnum,sqlfile,steptablename,estrowcount
-romania,1.00,1.somethings.sql,thistable,1

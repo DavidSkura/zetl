@@ -131,6 +131,24 @@ class db:
 									if not self.etl_step_exists(etl_name,etl_step):
 										self.add_etl_step(etl_name,etl_step,etl_script_file)		
 
+	def export_query_to_string(self,qry,szdelimiter='\t'):
+		self.cur.execute(qry)
+		sqloutput = '\n' #f = open(csv_filename,'w')
+		sz = ''
+		for k in [i[0] for i in self.cur.description]:
+			sz += k + szdelimiter
+		sqloutput += sz[:-1] + '\n'
+		#f.write(sz[:-1] + '\n')
+
+		for row in self.cur:
+			sz = ''
+			for i in range(0,len(self.cur.description)):
+				sz += str(row[i])+ szdelimiter
+
+			sqloutput += sz[:-1] + '\n'
+			#f.write(sz[:-1] + '\n')
+		return sqloutput
+
 	def export_query_to_csv(self,qry,csv_filename,szdelimiter=','):
 		self.cur.execute(qry)
 		f = open(csv_filename,'w')
