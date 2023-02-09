@@ -207,14 +207,23 @@ def show_etl_name_list():
 	for row in data:
 		print(' ' + row[0])
 
-if len(sys.argv) == 1 or sys.argv[1] == 'zetl.py' or sys.argv[1] == '-fa': # no parameters
-	print('zetl v2.1\n usage: ')
+solo = False
+soloparm = False
+if len(sys.argv) == 1 or sys.argv[1] == 'zetl.py':
+	solo = True
+if len(sys.argv) > 1:
+	if sys.argv[1] == '-fa':
+		soloparm = True
+
+if solo or soloparm: # no parameters
+	print('zetl v2.101\n usage: ')
 	print('zetl.py [etl_name] [-f] [-fa]') # -f will cause the csv file in the etl path to overwrite the z_etl table.
 	# -fa will empty zetl table and refresh from folders and files
 	print('')
-	if sys.argv[1] == '-fa':
-		print( 'truncating table ' + zetldb.ischema + '.z_etl')
-		zetldb.execute('TRUNCATE TABLE ' + zetldb.ischema + '.z_etl')
+	if soloparm:
+		if sys.argv[1] == '-fa':
+			print( 'truncating table ' + zetldb.ischema + '.z_etl')
+			zetldb.execute('TRUNCATE TABLE ' + zetldb.ischema + '.z_etl')
 
 	zetldb.load_folders_to_zetl()
 	zetldb.export_zetl()
