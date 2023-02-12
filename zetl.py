@@ -115,11 +115,16 @@ def run_one_etl_step(etl_name,stepnum,steptablename,sqlfile):
 										script_variables['DB_PORT'],
 										script_variables['DB_NAME'],
 										script_variables['DB_SCHEMA'])
-				
-					newdb.execute(individual_query)
-					newdb.commit()
+					if individual_query.strip().upper().find('SELECT') == 1:
+						print(newdb.export_query_to_str(individual_query))
+					else:
+						newdb.execute(individual_query)
+						newdb.commit()
 				else: # use default connection
-					zetldb.execute(individual_query)
+					if individual_query.strip().upper().find('SELECT') == 1:
+						print(zetldb.export_query_to_str(individual_query))
+					else:
+						zetldb.execute(individual_query)
 			except Exception as e:
 				log_sql_error(lid,str(e))
 

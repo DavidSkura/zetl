@@ -131,6 +131,23 @@ class db:
 									if not self.etl_step_exists(etl_name,etl_step):
 										self.add_etl_step(etl_name,etl_step,etl_script_file)		
 
+	def export_query_to_str(self,qry,szdelimiter=','):
+		self.cur.execute(qry)
+		f = ''
+		sz = ''
+		for k in [i[0] for i in self.cur.description]:
+			sz += k + szdelimiter
+		f += sz[:-1] + '\n'
+
+		for row in self.cur:
+			sz = ''
+			for i in range(0,len(self.cur.description)):
+				sz += str(row[i])+ szdelimiter
+
+			f += sz[:-1] + '\n'
+
+		return f
+
 	def export_query_to_csv(self,qry,csv_filename,szdelimiter=','):
 		self.cur.execute(qry)
 		f = open(csv_filename,'w')
@@ -162,7 +179,77 @@ class db:
 
 		self.export_query_to_csv('SELECT * FROM ' + qualified_table,csvfile,szdelimiter)
 
-	def load_csv_to_table(self,csvfile,tblname,withtruncate=True,szdelimiter=','):
+	def load_csv_to_table(self,csvfile,tblname,withtruncate=True,szdelimiter=',',fields='',withextrafields={}):
+		this_schema = tblname.split('.')[0]
+		try:
+			this_table = tblname.split('.')[1]
+		except:
+			this_schema = self.ischema
+			this_table = tblname.split('.')[0]
+
+		qualified_table = this_schema + '.' + this_table
+
+		if not self.does_table_exist(tblname):
+			raise Exception('Table does not exist.  Create table first')
+
+		if withtruncate:
+			self.execute('TRUNCATE TABLE ' + qualified_table)
+
+		f = open(csvfile,'r')
+		hdrs = f.read(1000).split('\n')[0].strip().split(szdelimiter)
+		f.close()		
+
+		isqlhdr = 'INSERT INTO ' + qualified_table + '('
+
+		if fields != '':
+			isqlhdr += fields	+ ') VALUES '	
+		else:
+			for i in range(0,len(hdrs)):
+				isqlhdr += hdrs[i] + ','
+			isqlhdr = isqlhdr[:-1] + ') VALUES '
+
+		skiprow1 = 0
+		batchcount = 0
+		ilines = ''
+
+		with open(csvfile) as myfile:
+			for line in myfile:
+				if line.strip()!='':
+					if skiprow1 == 0:
+						skiprow1 = 1
+					else:
+						batchcount += 1
+						row = line.rstrip("\n").split(szdelimiter)
+						newline = "("
+						if 'loadfile' in withextrafields: # loadfile, stationid, province
+							newline += "'" + withextrafields['loadfile']  + "',"
+						if 'stationid' in withextrafields: # loadfile, stationid,province
+							newline += "'" + withextrafields['stationid'] + "',"
+						if 'province' in withextrafields: # loadfile, stationid, province
+							newline += "'" + withextrafields['province'] + "',"
+
+						for j in range(0,len(row)):
+							if row[j].lower() == 'none' or row[j].lower() == 'null':
+								newline += "NULL,"
+							else:
+								newline += "'" + row[j].replace(',','').replace("'",'').replace('"','') + "',"
+							
+						ilines += newline[:-1] + '),'
+						
+						if batchcount > 500:
+							qry = isqlhdr + ilines[:-1]
+							batchcount = 0
+							ilines = ''
+							self.execute(qry)
+
+		if batchcount > 0:
+			qry = isqlhdr + ilines[:-1]
+			batchcount = 0
+			ilines = ''
+			self.execute(qry)
+
+
+	def load_csv_to_table_orig(self,csvfile,tblname,withtruncate=True,szdelimiter=','):
 		this_schema = tblname.split('.')[0]
 		try:
 			this_table = tblname.split('.')[1]
