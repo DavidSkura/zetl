@@ -101,7 +101,7 @@ class zetldb:
 					
 					dir_list = os.listdir(etl_folder + '\\' + etl_name)
 					for etl_script_file in os.listdir(etl_folder + '\\' + etl_name):
-						if etl_script_file.endswith(".sql"):
+						if etl_script_file.endswith(".sql") or etl_script_file.endswith(".ddl") or etl_script_file.endswith(".py") or etl_script_file.endswith(".bat"):
 							if len(etl_script_file.split('.')) == 3:
 								etl_step = etl_script_file.split('.')[0]
 								file_suffix = etl_script_file.split('.')[1] + '.' + etl_script_file.split('.')[2]

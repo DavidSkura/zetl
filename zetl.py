@@ -1,7 +1,6 @@
 """
   Dave Skura, Dec,2022
 """
-from zetl_utility_functions import zetlfn
 from zetldb_postgres import zetldb
 from postgresdave_package.postgresdave import db #install pip install postgresdave-package
 
@@ -198,10 +197,21 @@ def runetl(etl_name):
 		stepnum = row[0]
 		steptablename = row[1]
 		sqlfile = row[2]
+		foundfile = '.\\zetl_scripts\\' + etl_name + '\\' + sqlfile
 		#print('stepnum = \t\t' + str(stepnum))
 		#print('steptablename = \t' + steptablename)
 		#print('sqlfile = \t\t' + sqlfile)
-		run_one_etl_step(etl_name,stepnum,steptablename,sqlfile)
+		if sqlfile.lower().endswith('.sql') or sqlfile.lower().endswith('.ddl'):
+			run_one_etl_step(etl_name,stepnum,steptablename,sqlfile)
+		elif sqlfile.lower().endswith('.py'):
+			print('\nin file ' + sqlfile + '\n')
+			os.system('py ' + foundfile)
+
+		elif sqlfile.lower().endswith('.bat'):
+
+			print('\nin file ' + sqlfile + '\n')
+			os.system(foundfile)
+
 
 
 def show_etl_name_list():

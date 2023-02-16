@@ -1,7 +1,7 @@
 
 -- CREATE SCHEMA weather;
 
-DROP TABLE weather.postal_codes;
+DROP TABLE IF EXISTS weather.postal_codes;
 CREATE TABLE weather.postal_codes(
 	PostalCode varchar(10),
 	FSA varchar(5),
@@ -12,3 +12,6 @@ CREATE TABLE weather.postal_codes(
 	FSAProvince varchar(10),
 	AreaType varchar(50)
 );
+
+SELECT count(*)
+FROM weather.postal_codes;
