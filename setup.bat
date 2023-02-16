@@ -1,10 +1,10 @@
 @echo off
 REM
-REM  Dave Skura, 2022
+REM  Dave Skura, 2023
 REM
 
-SET zetl_version=1.0
-SET zetl_build_dt=Dec 2/2022
+SET zetl_version=2.0
+SET zetl_build_dt=Feb 16/2023
 SET DatabaseType=Postgres
 
 REM *** --------------------------------------------------------- ***
@@ -21,22 +21,8 @@ SET DB_SCHEMA=weather
 REM *** --------------------------------------------------------- ***
 REM *** --------------------------------------------------------- ***
 
-
-SET dbconnectionstr=%DB_USERNAME%/%DB_USERPWD%@%DB_HOST%:%DB_PORT%/%DB_NAME%/%DB_SCHEMA%
-
-echo class dbinfo: > dbvars.py
-echo		def __init__(self): >> dbvars.py
-echo			self.version=%zetl_version% >> dbvars.py
-echo			self.DatabaseType='%DatabaseType%' >> dbvars.py
-echo			self.updated='%zetl_build_dt%' >> dbvars.py
-echo: >> dbvars.py
-echo			self.DB_USERNAME='%DB_USERNAME%' >> dbvars.py
-echo			self.DB_USERPWD='%DB_USERPWD%' >> dbvars.py
-echo			self.DB_HOST='%DB_HOST%' >> dbvars.py
-echo			self.DB_PORT='%DB_PORT%' >> dbvars.py
-echo			self.DB_NAME='%DB_NAME%' >> dbvars.py
-echo			self.DB_SCHEMA='%DB_SCHEMA%' >> dbvars.py
-echo			self.dbconnectionstr='%dbconnectionstr%' >> dbvars.py
+echo %DB_USERNAME% - %DB_HOST% - %DB_HOST% - %DB_NAME% - %DB_SCHEMA%> .connection
+echo %DB_USERPWD%> .pwd
 
 echo.
 

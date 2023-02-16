@@ -1,2 +1,2 @@
-etl_name,stepnum,sqlfile,steptablename,estrowcount
-LoadWeatherStations,1.00,1.check.sql,,-1
+stepnum,sqlfile,steptablename,estrowcount
+1.00,1.check.sql,,-1
