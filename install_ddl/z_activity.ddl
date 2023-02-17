@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS z_activity;
+
 CREATE TABLE z_activity (
 	activity_type varchar(250) Primary key DEFAULT 'Primary', 
 	currently varchar(250) DEFAULT 'idle', 

@@ -1,2 +1,2 @@
 stepnum,cmdfile,steptablename,estrowcount
-1.00,1.somethings.sql,,-1
+1.00,1.truncate_zlog.sql,,-1

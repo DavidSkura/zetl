@@ -18,7 +18,7 @@ class zetldb:
 		etl_list = self.db.query('SELECT DISTINCT etl_name FROM ' + self.db.db_conn_dets.DB_SCHEMA + '.z_etl ORDER BY etl_name')
 		for etl in etl_list:
 			etl_name = etl[0]
-			qry = "SELECT stepnum,sqlfile,steptablename,estrowcount FROM " + self.db.db_conn_dets.DB_SCHEMA + ".z_etl WHERE etl_name = '" + etl_name + "' ORDER BY stepnum"
+			qry = "SELECT stepnum,cmdfile,steptablename,estrowcount FROM " + self.db.db_conn_dets.DB_SCHEMA + ".z_etl WHERE etl_name = '" + etl_name + "' ORDER BY stepnum"
 			csv_filename = 'zetl_scripts\\' + etl_name + '\\z_etl.csv'
 			self.db.export_query_to_csv(qry,csv_filename)
 
@@ -77,7 +77,7 @@ class zetldb:
 					return False
 
 	def add_etl_step(self,p_etl_name,p_etl_step,p_etl_filename):
-		isql = "INSERT INTO " + self.db.db_conn_dets.DB_SCHEMA + ".z_etl(etl_name,stepnum,sqlfile) VALUES ('" + p_etl_name + "'," + p_etl_step + ",'" + p_etl_filename + "')"
+		isql = "INSERT INTO " + self.db.db_conn_dets.DB_SCHEMA + ".z_etl(etl_name,stepnum,cmdfile) VALUES ('" + p_etl_name + "'," + p_etl_step + ",'" + p_etl_filename + "')"
 		self.db.execute(isql)
 		self.db.commit()
 		#print('Adding ' + p_etl_name + '\\' + p_etl_filename)
