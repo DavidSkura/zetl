@@ -29,11 +29,14 @@ def logstepstart(etl_name,stepnum,cmdfile,steptablename,query,ipart):
 	lid = zetldb.db.queryone("SELECT max(id) FROM " + zetldb.db.db_conn_dets.DB_SCHEMA + ".z_log ")
 	return lid
 
-def logstepend(lid,the_rowcount,consoleoutput='not-passed-in'):
+def logstepend(lid,the_rowcount,consoleoutput='not-passed-in',database='not-passed-in'):
 	usql = "UPDATE  " + zetldb.db.db_conn_dets.DB_SCHEMA + ".z_log SET "
 
 	if consoleoutput!='not-passed-in':
 		usql += "script_output='" + consoleoutput.replace("'",'`') + "',"
+
+	if database!='not-passed-in':
+		usql += "database='" + database.replace("'",'`') + "',"
 
 	usql += "rowcount = " + str(the_rowcount) + ", endtime = CURRENT_TIMESTAMP WHERE id = " + str(lid) 
 
@@ -69,9 +72,9 @@ def RemoveComments(asql):
 
 	return ret
 
-def log_script_error(lid,script_error,script_output=''):
+def log_script_error(lid,script_error,database='',script_output=''):
 
-	usql = "UPDATE  " + zetldb.db.db_conn_dets.DB_SCHEMA + ".z_log SET script_output = '" + script_output.replace("'","`") + "', script_error = '" + script_error.replace("'","`") + "', endtime = CURRENT_TIMESTAMP WHERE id = " + str(lid) 
+	usql = "UPDATE  " + zetldb.db.db_conn_dets.DB_SCHEMA + ".z_log SET database='" + database.replace("'",'`') + "', script_output = '" + script_output.replace("'","`") + "', script_error = '" + script_error.replace("'","`") + "', endtime = CURRENT_TIMESTAMP WHERE id = " + str(lid) 
 	try:
 		zetldb.db.execute(usql)
 		zetldb.db.commit()
@@ -103,7 +106,7 @@ def run_one_etl_step(etl_name,stepnum,steptablename,cmdfile):
 
 	ipart = 0
 	newdb = db()
-
+	print(newdb.dbstr())
 	for individual_query in sql.split(';'):
 
 		ipart += 1
@@ -116,6 +119,7 @@ def run_one_etl_step(etl_name,stepnum,steptablename,cmdfile):
 			#script_output += individual_query + '\n \n'
 
 			lid = logstepstart(etl_name,stepnum,cmdfile,steptablename,individual_query,ipart)
+			database = ''
 
 			try:
 				if script_variables['DB_USERNAME'] != '': # dont use default connection
@@ -125,6 +129,8 @@ def run_one_etl_step(etl_name,stepnum,steptablename,cmdfile):
 										,script_variables['DB_PORT']
 										,script_variables['DB_NAME']
 										,script_variables['DB_SCHEMA'])
+
+					database = newdb.dbstr()
 
 					if individual_query.strip().upper().find('SELECT') == 0:
 						results = newdb.export_query_to_str(individual_query)
@@ -138,6 +144,7 @@ def run_one_etl_step(etl_name,stepnum,steptablename,cmdfile):
 
 					logend_steptable(newdb,lid,script_variables,steptablename,script_output)
 				else: # use default connection
+					database = zetldb.db.dbstr()
 					if individual_query.strip().upper().find('SELECT') == 0:
 						results = zetldb.db.export_query_to_str(individual_query)
 						print('\n' + results)
@@ -147,9 +154,9 @@ def run_one_etl_step(etl_name,stepnum,steptablename,cmdfile):
 
 						zetldb.db.execute(individual_query)
 
-					logend_steptable(zetldb,lid,script_variables,steptablename,script_output)
+					logend_steptable(zetldb.db,lid,script_variables,steptablename,script_output)
 			except Exception as e:
-				log_script_error(lid,str(e),script_output)
+				log_script_error(lid,str(e),database, script_output)
 				print(str(e))
 				sys.exit(1)
 
@@ -170,7 +177,7 @@ def logend_steptable(dbconn,lid,script_variables,steptablename,script_output):
 		try:
 			this_table = steptablename.split('.')[1]
 		except:
-			this_schema = zetldb.db.db_conn_dets.DB_SCHEMA
+			this_schema = dbconn.db_conn_dets.DB_SCHEMA
 			this_table = steptablename.split('.')[0]
 
 	qualified_table = this_schema + '.' + this_table
@@ -179,7 +186,7 @@ def logend_steptable(dbconn,lid,script_variables,steptablename,script_output):
 		tblrowcount = dbconn.queryone("SELECT COUNT(*) FROM " + qualified_table)
 		dbconn.close()
 
-	logstepend(lid,tblrowcount,script_output)
+	logstepend(lid,tblrowcount,script_output,dbconn.dbstr())
 
 
 def get_current_activity():
@@ -240,13 +247,13 @@ def runetl(etl_name):
 
 			if exit_code != 0:
 				print(consoleoutput + '\n exit_code=' + str(exit_code))
-				log_script_error(lid,foundfile + ' failed with error_code ' + str(exit_code),consoleoutput.strip())
+				log_script_error(lid,foundfile + ' failed with error_code ' + str(exit_code),zetldb.db.dbstr(),consoleoutput.strip())
 				logstepend(lid,0)
 
 				sys.exit(exit_code)
 
 			print(consoleoutput)
-			logstepend(lid,0,consoleoutput.strip())
+			logstepend(lid,0,consoleoutput.strip(),zetldb.db.dbstr())
 
 		elif cmdfile.lower().endswith('.bat'):
 			lid = logstepstart(etl_name,stepnum,cmdfile,steptablename,'Windows bat script',0)
@@ -259,13 +266,13 @@ def runetl(etl_name):
 			
 			if exit_code != 0:
 				print(consoleoutput + '\n exit_code=' + str(exit_code))
-				log_script_error(lid,foundfile + ' failed with error_code ' + str(exit_code),consoleoutput.strip())
+				log_script_error(lid,foundfile + ' failed with error_code ' + str(exit_code),zetldb.db.dbstr(),consoleoutput.strip())
 				logstepend(lid,0)
 
 				sys.exit(exit_code)
 
 			print(consoleoutput)
-			logstepend(lid,0,consoleoutput.strip())
+			logstepend(lid,0,consoleoutput.strip(),zetldb.db.dbstr())
 
 def show_etl_name_list():
 	data = zetldb.db.query('SELECT distinct etl_name from ' + zetldb.db.db_conn_dets.DB_SCHEMA + '.z_etl order by etl_name')

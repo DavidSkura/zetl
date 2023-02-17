@@ -15,6 +15,7 @@ CREATE TABLE z_log (
 	script_output varchar(8124) DEFAULT NULL, 
 	script_error varchar(255) DEFAULT NULL, 
 	cmdfile varchar(250) DEFAULT NULL, 
+	database varchar(250) DEFAULT NULL, 
 	dtm TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
 );
 
