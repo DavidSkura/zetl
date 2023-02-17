@@ -102,8 +102,9 @@ def run_one_etl_step(etl_name,stepnum,steptablename,cmdfile):
 	sql = RemoveComments(sqlfromfile.strip())
 
 	ipart = 0
+	newdb = db()
+
 	for individual_query in sql.split(';'):
-		newdb = db()
 
 		ipart += 1
 		individual_query = individual_query.strip()
@@ -135,6 +136,7 @@ def run_one_etl_step(etl_name,stepnum,steptablename,cmdfile):
 						newdb.execute(individual_query)
 						newdb.commit()
 
+					logend_steptable(newdb,lid,script_variables,steptablename,script_output)
 				else: # use default connection
 					if individual_query.strip().upper().find('SELECT') == 0:
 						results = zetldb.db.export_query_to_str(individual_query)
@@ -145,14 +147,14 @@ def run_one_etl_step(etl_name,stepnum,steptablename,cmdfile):
 
 						zetldb.db.execute(individual_query)
 
-				logend_steptable(lid,script_variables,steptablename,script_output)
+					logend_steptable(zetldb,lid,script_variables,steptablename,script_output)
 			except Exception as e:
 				log_script_error(lid,str(e),script_output)
 				print(str(e))
 				sys.exit(1)
 
 
-def logend_steptable(lid,script_variables,steptablename,script_output):
+def logend_steptable(dbconn,lid,script_variables,steptablename,script_output):
 	if script_variables['DB_USERNAME'] != '': # dont use default connection
 		try:
 			this_table = steptablename.split('.')[1]
@@ -173,14 +175,9 @@ def logend_steptable(lid,script_variables,steptablename,script_output):
 
 	qualified_table = this_schema + '.' + this_table
 	tblrowcount = 0
-	if script_variables['DB_USERNAME'] != '': # dont use default connection
-		if newdb.does_table_exist(qualified_table):
-			tblrowcount = newdb.queryone("SELECT COUNT(*) FROM " + qualified_table)
-			newdb.close()
-
-	else:# use default connection
-		if zetldb.db.does_table_exist(qualified_table):
-			tblrowcount = zetldb.db.queryone("SELECT COUNT(*) FROM " + qualified_table)
+	if dbconn.does_table_exist(qualified_table):
+		tblrowcount = dbconn.queryone("SELECT COUNT(*) FROM " + qualified_table)
+		dbconn.close()
 
 	logstepend(lid,tblrowcount,script_output)
 
