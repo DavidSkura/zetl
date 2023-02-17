@@ -6,7 +6,7 @@ CREATE TABLE z_activity (
 	previously varchar(250) DEFAULT NULL, 
 	keyfld varchar(250) DEFAULT '', 
 	prvkeyfld varchar(250) DEFAULT '', 
-	dtm TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	dtm TIMESTAMP DEFAULT now()::timestamp
 );
 
 

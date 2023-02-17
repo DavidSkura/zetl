@@ -1,11 +1,11 @@
 """
   Dave Skura, 2022
 """
-import os
-import sys
 from postgresdave_package.postgresdave import db #install pip install postgresdave-package
+import sys
+import os
 
-class zetldb:
+class zetldbaccess:
 
 	def __init__(self):
 		self.db = db()
@@ -13,6 +13,31 @@ class zetldb:
 
 		self.version=2.0
 
+	def	createtables(self):
+		install_ddl = '.\\install_ddl\\'
+		ddl_files = os.listdir(install_ddl)
+		for i in range(0,len(ddl_files)):
+			ddl_file = ddl_files[i]
+			tablename = ddl_file.split('.')[0]
+			
+			print('Found ' + ddl_file)
+			if not self.db.does_table_exist(tablename):
+
+				print('Table ' + tablename + ' does not exist.  Creating it from file: '  + ddl_file)
+
+				fh = open(install_ddl + ddl_file,'r')
+				ddl = fh.read()
+				fh.close()
+
+				# add schema prefix
+				ddl = ddl.replace('CREATE TABLE ','CREATE TABLE ' + self.db.db_conn_dets.DB_SCHEMA + '.')
+				ddl = ddl.replace('COMMENT ON TABLE ','COMMENT ON TABLE ' + self.db.db_conn_dets.DB_SCHEMA + '.')
+				try:
+					self.db.execute(ddl)
+					print('Table ' + tablename + ' created. ')
+				except Exception as e:
+					raise Exception('Cannot create table ' + tablename + '\n' + str(e))
+					
 	def export_zetl(self):
 		
 		etl_list = self.db.query('SELECT DISTINCT etl_name FROM ' + self.db.db_conn_dets.DB_SCHEMA + '.z_etl ORDER BY etl_name')
@@ -109,9 +134,31 @@ class zetldb:
 									if not self.etl_step_exists(etl_name,etl_step):
 										self.add_etl_step(etl_name,etl_step,etl_script_file)		
 
-
 if __name__ == '__main__':
-	print ("db command line test") # 
-	print('')
-	myzetldb = zetldb()
-	
+	zetl = zetldbaccess()
+
+	if len(sys.argv) == 1 or sys.argv[1] == 'zetldbfile.py':
+		raise Exception('This program needs 1 argument.  [check_tables_exist, connection_test]')
+		sys.exit(1)
+	elif len(sys.argv) > 1: # at least 1 parms
+		action = sys.argv[1]
+
+	if action.lower() == 'check_tables_exist':
+		zetl.createtables()
+
+	elif action.lower() == 'connection_test':
+		try:
+			print(zetl.db.queryone('SELECT version()') + '\n' + zetl.db.dbstr())
+			sys.exit(0)
+
+		except Exception as e:
+			print('zetl_initdb.py connection_test  > failed. Check database connection detail variables in setup.bat \n' + str(e))
+			sys.exit(1)
+
+	else:
+		raise Exception('This program needs 1 argument.  check_tables_exist')
+		sys.exit(1)
+
+
+	sys.exit(0)
+

@@ -7,7 +7,7 @@ CREATE TABLE z_etl (
 	cmdfile varchar(250) DEFAULT '', 
 	cmd_to_run varchar(12000) DEFAULT '', 
 	note varchar(1024) DEFAULT '', 
-	dtm TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+	dtm TIMESTAMP DEFAULT now()::timestamp 
 );
 
 COMMENT ON TABLE z_etl IS 'This is the Master etl table.  When calling run_etl.py <etl_name> .. all lines matching etl_name here are executed.';

@@ -1,7 +1,7 @@
 """
   Dave Skura, Dec,2022
 """
-from zetldb_postgres import zetldb
+from zetldbfile import zetldbaccess
 from postgresdave_package.postgresdave import db #install pip install postgresdave-package
 
 import psycopg2 
@@ -16,14 +16,14 @@ sztoday=str(now.year) + '-' + ('0' + str(now.month))[-2:] + '-' + str(now.day)
 
 force = True
 
-zetldb = zetldb()
+zetldb = zetldbaccess()
 
 def logstepstart(etl_name,stepnum,cmdfile,steptablename,query,ipart):
 
 	zsql = "INSERT INTO " + zetldb.db.db_conn_dets.DB_SCHEMA + ".z_log (etl_name,dbuser,stepnum,cmdfile,steptablename,"
 	zsql += "cmd_to_run,part,rundtm) VALUES ('" + etl_name + "',(SELECT current_user),"
 	zsql += str(stepnum) + ",'" + str(cmdfile) + "','" + steptablename + "','" 
-	zsql += query.replace('?','').replace("'","`") + "'," + str(ipart) + ", CURRENT_TIMESTAMP);"
+	zsql += query.replace('?','').replace("'","`") + "'," + str(ipart) + ", now()::timestamp);"
 	zetldb.db.execute(zsql)
 	
 	lid = zetldb.db.queryone("SELECT max(id) FROM " + zetldb.db.db_conn_dets.DB_SCHEMA + ".z_log ")
@@ -38,7 +38,7 @@ def logstepend(lid,the_rowcount,consoleoutput='not-passed-in',database='not-pass
 	if database!='not-passed-in':
 		usql += "database='" + database.replace("'",'`') + "',"
 
-	usql += "rowcount = " + str(the_rowcount) + ", endtime = CURRENT_TIMESTAMP WHERE id = " + str(lid) 
+	usql += "rowcount = " + str(the_rowcount) + ", endtime = now()::timestamp WHERE id = " + str(lid) 
 
 	try:
 		zetldb.db.execute(usql)
@@ -74,7 +74,7 @@ def RemoveComments(asql):
 
 def log_script_error(lid,script_error,database='',script_output=''):
 
-	usql = "UPDATE  " + zetldb.db.db_conn_dets.DB_SCHEMA + ".z_log SET database='" + database.replace("'",'`') + "', script_output = '" + script_output.replace("'","`") + "', script_error = '" + script_error.replace("'","`") + "', endtime = CURRENT_TIMESTAMP WHERE id = " + str(lid) 
+	usql = "UPDATE  " + zetldb.db.db_conn_dets.DB_SCHEMA + ".z_log SET database='" + database.replace("'",'`') + "', script_output = '" + script_output.replace("'","`") + "', script_error = '" + script_error.replace("'","`") + "', endtime = now()::timestamp WHERE id = " + str(lid) 
 	try:
 		zetldb.db.execute(usql)
 		zetldb.db.commit()

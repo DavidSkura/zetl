@@ -5,7 +5,7 @@
 from postgresdave_package.postgresdave import db #install pip install postgresdave-package
 
 mydb = db()
-mydb.useConnectionDetails('postgres','<your-password-here>','localhost','1532','postgres','public')
+mydb.useConnectionDetails('postgres','<password>','localhost','1532','postgres','public')
 
 
 log_sql = """
