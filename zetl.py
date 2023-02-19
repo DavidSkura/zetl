@@ -3,6 +3,7 @@
 """
 from zetldbfile import zetldbaccess
 from postgresdave_package.postgresdave import db #install pip install postgresdave-package
+from mysqldave_package.mysqldave import mysql_db 
 
 import psycopg2 
 
@@ -83,7 +84,7 @@ def log_script_error(lid,script_error,database='',script_output=''):
 
 def run_one_etl_step(etl_name,stepnum,steptablename,cmdfile):
 
-	script_variables = {'DB_USERNAME':'','DB_USERPWD':'','DB_HOST':'','DB_PORT':'','DB_NAME':'','DB_SCHEMA':''}
+	script_variables = {'DB_TYPE':'','DB_USERNAME':'','DB_USERPWD':'','DB_HOST':'','DB_PORT':'','DB_NAME':'','DB_SCHEMA':''}
 
 	findcmdfile = '.\\zetl_scripts\\' + etl_name + '\\' + cmdfile
 	try:
@@ -105,8 +106,6 @@ def run_one_etl_step(etl_name,stepnum,steptablename,cmdfile):
 	sql = RemoveComments(sqlfromfile.strip())
 
 	ipart = 0
-	newdb = db()
-	print(newdb.dbstr())
 	for individual_query in sql.split(';'):
 
 		ipart += 1
@@ -122,27 +121,22 @@ def run_one_etl_step(etl_name,stepnum,steptablename,cmdfile):
 			database = ''
 
 			try:
-				if script_variables['DB_USERNAME'] != '': # dont use default connection
-					newdb.useConnectionDetails(script_variables['DB_USERNAME']
-										,script_variables['DB_USERPWD']
-										,script_variables['DB_HOST']
-										,script_variables['DB_PORT']
-										,script_variables['DB_NAME']
-										,script_variables['DB_SCHEMA'])
+				if script_variables['DB_TYPE'] != '': # dont use default connection
+					new_postgresdb = db()
+					new_mysqldb = mysql_db()
 
-					database = newdb.dbstr()
+					database = ''
+					if script_variables['DB_TYPE'].strip().upper() == 'POSTGRES':
+						script_output, database = connect_and_run(script_variables,new_postgresdb,individual_query)
 
-					if individual_query.strip().upper().find('SELECT') == 0:
-						results = newdb.export_query_to_str(individual_query)
-						script_output += results
-						print('\n' + results)
+					elif script_variables['DB_TYPE'].strip().upper() == 'MYSQL':
+						script_output, database = connect_and_run(script_variables,new_mysqldb,individual_query)
 
 					else:
+						print('DB_TYPE must be either Postgres or MySQL')
 
-						newdb.execute(individual_query)
-						newdb.commit()
+					logend_steptable(zetldb.db,lid,script_variables,steptablename,script_output)
 
-					logend_steptable(newdb,lid,script_variables,steptablename,script_output)
 				else: # use default connection
 					database = zetldb.db.dbstr()
 					if individual_query.strip().upper().find('SELECT') == 0:
@@ -159,6 +153,28 @@ def run_one_etl_step(etl_name,stepnum,steptablename,cmdfile):
 				log_script_error(lid,str(e),database, script_output)
 				print(str(e))
 				sys.exit(1)
+
+def connect_and_run(script_variables,dbconn,individual_query):
+	script_output = ''
+
+	dbconn.useConnectionDetails(script_variables['DB_USERNAME']
+					,script_variables['DB_USERPWD']
+					,script_variables['DB_HOST']
+					,script_variables['DB_PORT']
+					,script_variables['DB_NAME']
+					,script_variables['DB_SCHEMA'])
+
+	if individual_query.strip().upper().find('SELECT') == 0:
+		results = dbconn.export_query_to_str(individual_query)
+		script_output += results
+		print('\n' + results)
+
+	else:
+
+		dbconn.execute(individual_query)
+		dbconn.commit()
+
+	return script_output, dbconn.dbstr()
 
 
 def logend_steptable(dbconn,lid,script_variables,steptablename,script_output):

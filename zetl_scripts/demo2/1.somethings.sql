@@ -1,6 +1,7 @@
 /*
   -- Dave Skura, 2022
 
+DB_TYPE		= Postgres
 DB_USERNAME	= zetluser
 DB_USERPWD  = zetluser
 DB_HOST		= localhost

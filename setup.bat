@@ -14,6 +14,8 @@ echo.
 echo You have:
 python --version
 
+pip install mysql-connector-python
+pip install psycopg2
 
 SET DB_HOST=localhost
 SET DB_PORT=1532
