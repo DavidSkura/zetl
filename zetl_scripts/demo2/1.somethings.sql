@@ -1,13 +1,13 @@
 /*
   -- Dave Skura, 2022
 
-DB_TYPE		= Postgres
-DB_USERNAME	= zetluser
-DB_USERPWD  = zetluser
+DB_TYPE		= MySQL
+DB_USERNAME	= dad
+DB_USERPWD  = 4165605869
 DB_HOST		= localhost
-DB_PORT		= 1532
-DB_NAME		= zetl_db
-DB_SCHEMA	= _zetl
+DB_PORT		= 3306
+DB_NAME		= nfldb
+DB_SCHEMA	= nfldb
 
 */
 

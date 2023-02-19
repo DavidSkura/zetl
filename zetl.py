@@ -125,20 +125,23 @@ def run_one_etl_step(etl_name,stepnum,steptablename,cmdfile):
 					new_postgresdb = db()
 					new_mysqldb = mysql_db()
 
-					database = ''
 					if script_variables['DB_TYPE'].strip().upper() == 'POSTGRES':
 						script_output, database = connect_and_run(script_variables,new_postgresdb,individual_query)
+						database = script_variables['DB_TYPE'] + ': ' + database
+						logend_steptable(new_postgresdb,lid,script_variables,steptablename,script_output,database)
 
 					elif script_variables['DB_TYPE'].strip().upper() == 'MYSQL':
 						script_output, database = connect_and_run(script_variables,new_mysqldb,individual_query)
+						database = script_variables['DB_TYPE'] + ': ' + database
+						logend_steptable(new_mysqldb,lid,script_variables,steptablename,script_output,database)
 
 					else:
 						print('DB_TYPE must be either Postgres or MySQL')
+						sys.exit(0)
 
-					logend_steptable(zetldb.db,lid,script_variables,steptablename,script_output)
 
 				else: # use default connection
-					database = zetldb.db.dbstr()
+					database = 'default: ' + zetldb.db.dbstr()
 					if individual_query.strip().upper().find('SELECT') == 0:
 						results = zetldb.db.export_query_to_str(individual_query)
 						print('\n' + results)
@@ -148,7 +151,7 @@ def run_one_etl_step(etl_name,stepnum,steptablename,cmdfile):
 
 						zetldb.db.execute(individual_query)
 
-					logend_steptable(zetldb.db,lid,script_variables,steptablename,script_output)
+					logend_steptable(zetldb.db,lid,script_variables,steptablename,script_output,database)
 			except Exception as e:
 				log_script_error(lid,str(e),database, script_output)
 				print(str(e))
@@ -177,7 +180,7 @@ def connect_and_run(script_variables,dbconn,individual_query):
 	return script_output, dbconn.dbstr()
 
 
-def logend_steptable(dbconn,lid,script_variables,steptablename,script_output):
+def logend_steptable(dbconn,lid,script_variables,steptablename,script_output,database=''):
 	if script_variables['DB_USERNAME'] != '': # dont use default connection
 		try:
 			this_table = steptablename.split('.')[1]
@@ -202,7 +205,7 @@ def logend_steptable(dbconn,lid,script_variables,steptablename,script_output):
 		tblrowcount = dbconn.queryone("SELECT COUNT(*) FROM " + qualified_table)
 		dbconn.close()
 
-	logstepend(lid,tblrowcount,script_output,dbconn.dbstr())
+	logstepend(lid,tblrowcount,script_output,database)
 
 
 def get_current_activity():
