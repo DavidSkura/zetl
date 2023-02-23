@@ -1,7 +1,6 @@
 """
   Dave Skura, 2023
   
-  File Description:
 """
 from postgresdave_package.postgresdave import db #install pip install postgresdave-package
 

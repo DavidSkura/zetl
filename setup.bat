@@ -16,13 +16,8 @@ python --version
 
 pip install mysql-connector-python
 pip install psycopg2
-
-SET DB_HOST=localhost
-SET DB_PORT=1532
-SET DB_NAME=postgres
-SET DB_SCHEMA=public
-SET DB_USERNAME=postgres
-SET DB_USERPWD=password
+pip install postgresdave-package
+pip install mysqldave-package
 
 echo you need to enter the database connection details or accept defaults:
 
@@ -31,13 +26,14 @@ set /P DB_PORT=Enter DB_PORT (1532):
 set /P DB_NAME=Enter DB_NAME (postgres): 
 set /P DB_SCHEMA=Enter DB_SCHEMA (public): 
 set /P DB_USERNAME=Enter DB_USERNAME (postgres): 
-set /P DB_USERPWD=Enter DB_USERPWD (password): 
+set /P DB_USERPWD=Enter DB_USERPWD [the password you supplied during database install]: 
 
 echo %DB_USERNAME% - %DB_HOST% - %DB_PORT% - %DB_NAME% - %DB_SCHEMA%> .connection
 echo %DB_USERPWD%> .pwd
 
+echo.
 echo Checking Database connection
-zetl_initdb.py connection_test
+zetldbfile.py connection_test
 echo.
 
 if ERRORLEVEL 1 GOTO end
