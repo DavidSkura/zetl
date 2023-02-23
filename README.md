@@ -21,7 +21,7 @@ Download and install postgres (https://www.postgresql.org/download/) to your loc
 > - Username: postgres  
 > - Password: <whatever_you_supplied>
 
-### 3. download zetl and unzip to a local folder on your computer, such as c:\zetl
+### 3. download zetl (https://github.com/daveskura/zetl/archive/refs/heads/main.zip) and unzip to a local folder on your computer, such as c:\zetl
   
 Folder will look like this:
   
