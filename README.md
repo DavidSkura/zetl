@@ -3,7 +3,7 @@ A simple ETL framework for Python, SQL and BAT files which uses a Postgres datab
 
 ## Local windows pc install
 
-### first install Postgres
+### 1. First install Postgres
 
 Download and install postgres (https://www.postgresql.org/download/) to your local computer.  Remember the password.  After installing Postgres, your connection string will be:
 
@@ -14,7 +14,7 @@ Download and install postgres (https://www.postgresql.org/download/) to your loc
 > - Username: postgres  
 > - Password: <whatever_you_supplied>
 
-### download zetl and unzip to a local folder on your computer, such as c:\zetl
+### 2. download zetl and unzip to a local folder on your computer, such as c:\zetl
   
 Folder will look like this:
   
@@ -23,26 +23,24 @@ Folder will look like this:
 > - zetl\install_ddl
 > - zetl\zetl_scripts
 
-#### run zetl\setup.bat
+### 3. Run setup.bat
   
 This will install the neccessary python packages and prompt for connection details to the Postgres database you just istalled. Hit enter to accept the defaults and enter the password you entered during the database setup.
   
 setup will then connect to postgres and create the 3 tables required by zetl.
+ 
+### 4. Run zetl.py
   
-### check your setup
-  
-#### Run zetl.py
-  
-If your setup is successful, zetl will connect and list etl's available to run such as:
+To run any zetl commands, go to the command line and change to the zetlt directory.  eg. CD \zetl
+
+If your setup is successful, when you run zetl.py with no parameters, it will connect and list ETL's available to run such as:
   
 > demo1
 > demo2
 > demo3
 > empty_log
 
-You can try running an ETL by passing it as an argument to zetl as follows:
-  
-#### zetl demo1
+--- 
 
 ## Usage
 
