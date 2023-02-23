@@ -1,11 +1,11 @@
 A simple ETL framework for Python, SQL and BAT files which uses a Postgres database for activity logging.
-
+---
 
 ## Local windows pc install
 
-  ### first install Postgres
+### first install Postgres
 
-  Download and install postgres (https://www.postgresql.org/download/) to your local computer.  Remember the password.  After installing Postgres, your connection string will be:
+Download and install postgres (https://www.postgresql.org/download/) to your local computer.  Remember the password.  After installing Postgres, your connection string will be:
 
 > - host: localhost
 > - port: 1532
@@ -14,9 +14,9 @@ A simple ETL framework for Python, SQL and BAT files which uses a Postgres datab
 > - Username: postgres  
 > - Password: <whatever_you_supplied>
 
-  ### download zetl and unzip to a local folder on your computer, such as c:\zetl
+### download zetl and unzip to a local folder on your computer, such as c:\zetl
   
-  Folder will look like this:
+Folder will look like this:
   
 > zetl
 > zetl\examples
@@ -25,25 +25,24 @@ A simple ETL framework for Python, SQL and BAT files which uses a Postgres datab
 
 - run zetl\setup.bat
   
-  This will install the neccessary python packages and prompt for connection details to the Postgres database you just istalled. Hit enter to accept the defaults and enter the password you entered during the database setup.
+This will install the neccessary python packages and prompt for connection details to the Postgres database you just istalled. Hit enter to accept the defaults and enter the password you entered during the database setup.
   
-  setup will then connect to postgres and create the 3 tables required by zetl.
+setup will then connect to postgres and create the 3 tables required by zetl.
   
-  ### check your setup
+### check your setup
   
 - Run zetl.py
   
-  If your setup is successful, zetl will connect and list etl's available to run such as:
+If your setup is successful, zetl will connect and list etl's available to run such as:
   
 > demo1
 > demo2
 > demo3
 > empty_log
 
-  You can try running an ETL by passing it as an argument to zetl as follows:
+You can try running an ETL by passing it as an argument to zetl as follows:
   
 - zetl demo1
-
 
 ## Usage
 
