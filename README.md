@@ -1,9 +1,16 @@
 A simple ETL framework for Python, SQL and BAT files which uses a Postgres database for activity logging.
+the zetl framework requires python and Postgres to run.
+
 ---
 
 ## Local windows pc install
 
-### 1. First install Postgres
+
+### 1. Install Python
+
+Download and install python (https://www.python.org/downloads/) to your local computer.
+
+### 2. Install Postgres
 
 Download and install postgres (https://www.postgresql.org/download/) to your local computer.  Remember the password.  After installing Postgres, your connection string will be:
 
@@ -14,7 +21,7 @@ Download and install postgres (https://www.postgresql.org/download/) to your loc
 > - Username: postgres  
 > - Password: <whatever_you_supplied>
 
-### 2. download zetl and unzip to a local folder on your computer, such as c:\zetl
+### 3. download zetl and unzip to a local folder on your computer, such as c:\zetl
   
 Folder will look like this:
   
