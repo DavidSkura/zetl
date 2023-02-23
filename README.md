@@ -40,13 +40,14 @@ setup will then connect to postgres and create the 3 tables required by zetl.
  
 ### 4. Run zetl.py
   
-To run any zetl commands, go to the command line and change to the zetlt directory.  eg. CD \zetl
+To run any zetl commands, go to the command line and change to the zetl directory.  eg. CD \zetl
 
 If your setup is successful, when you run zetl.py with no parameters, it will connect and list ETL's available to run such as:
   
 > - demo1
 > - demo2
 > - demo3
+> - view_log
 > - empty_log
 
 --- 
@@ -68,4 +69,23 @@ An ETL exists in the form of a directory, under zetl_scripts, with files of a sp
 > - zetl\zetl_scripts\demo1\1.hello.py
 > - zetl\zetl_scripts\demo1\2.something.sql
 > - zetl\zetl_scripts\demo1\3.hello.bat
+
+### create an ETL
+
+create a folder under zetl_scripts and add a file which follows the naming convention.
+
+### run an ETL
+
+Go to the command line and change to the zetl directory.  eg. CD \zetl
+pass the ETL as a parameter to zetl
+
+for example:
+
+> zetl demo1
+
+### View the ETL Log
+
+Everytime an ETL runs, the z_log table is updated with the activity.  To see view the log, query the z_log table or run the ETL view_log as follows:
+
+zetl view_log
 
