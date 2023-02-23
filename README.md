@@ -23,7 +23,7 @@ Folder will look like this:
 > - zetl\install_ddl
 > - zetl\zetl_scripts
 
-- run zetl\setup.bat
+#### run zetl\setup.bat
   
 This will install the neccessary python packages and prompt for connection details to the Postgres database you just istalled. Hit enter to accept the defaults and enter the password you entered during the database setup.
   
@@ -31,7 +31,7 @@ setup will then connect to postgres and create the 3 tables required by zetl.
   
 ### check your setup
   
-- Run zetl.py
+#### Run zetl.py
   
 If your setup is successful, zetl will connect and list etl's available to run such as:
   
@@ -42,7 +42,7 @@ If your setup is successful, zetl will connect and list etl's available to run s
 
 You can try running an ETL by passing it as an argument to zetl as follows:
   
-- zetl demo1
+#### zetl demo1
 
 ## Usage
 
@@ -55,7 +55,7 @@ You can try running an ETL by passing it as an argument to zetl as follows:
 > - activity is any alphanumeric name for the activity of the file
 > - extension must be either py, bat or sql
 
-- For example:
+####  For example:
   
 > - zetl\zetl_scripts\demo1\1.hello.py
 > - zetl\zetl_scripts\demo1\2.something.sql
