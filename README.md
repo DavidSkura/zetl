@@ -34,6 +34,9 @@ Folder will look like this:
 This will install the neccessary python packages and prompt for connection details to the Postgres database you just istalled. Hit enter to accept the defaults and enter the password you entered during the database setup.
   
 setup will then connect to postgres and create the 3 tables required by zetl.
+> - z_activity
+> - z_log
+> - z_etl
  
 ### 4. Run zetl.py
   
