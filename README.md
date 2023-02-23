@@ -53,6 +53,8 @@ If your setup is successful, when you run zetl.py with no parameters, it will co
 
 ## Usage
 
+--- 
+
 ### What is an ETL to zetl ?
 
 - An ETL exists in the form of a directory, under zetl_scripts, with files of a specific naming convention which are either python, windows bat, or sql.
