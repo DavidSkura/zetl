@@ -50,16 +50,18 @@ A simple ETL framework for Python, SQL and BAT files which uses a Postgres datab
 ### What is an ETL to zetl ?
 
 - An ETL exists in the form of a directory, under zetl_scripts, with files of a specific naming convention which are either python, windows bat, or sql.
-- The file naming convention is as follows: <step_number>.<activity>.<extension>
+- The file naming convention is as follows: step_number.activity.extension
   
-    > step_number is any integer unique in the immediate folder
-    > activity is any alphanumeric name for the activity of the file
-    > extension must be either py, bat or sql
+> step_number is any integer unique in the immediate folder
+  activity is any alphanumeric name for the activity of the file
+  extension must be either py, bat or sql
 
 - For example:
   
     > zetl\zetl_scripts\demo1\1.hello.py
+    
     > zetl\zetl_scripts\demo1\2.something.sql
+    
     > zetl\zetl_scripts\demo1\3.hello.bat
 
 
