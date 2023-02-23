@@ -18,10 +18,10 @@ Download and install postgres (https://www.postgresql.org/download/) to your loc
   
 Folder will look like this:
   
-> zetl
-> zetl\examples
-> zetl\install_ddl
-> zetl\zetl_scripts
+> - zetl
+> - zetl\examples
+> - zetl\install_ddl
+> - zetl\zetl_scripts
 
 - run zetl\setup.bat
   
