@@ -18,11 +18,11 @@ A simple ETL framework for Python, SQL and BAT files which uses a Postgres datab
   
   Folder will look like this:
   
-  >zetl
-  >zetl\examples
-  >zetl\install_ddl
-  >zetl\zetl_scripts
-  
+    > zetl
+    > zetl\examples
+    > zetl\install_ddl
+    > zetl\zetl_scripts
+
   - run zetl\setup.bat
   
   This will install the neccessary python packages and prompt for connection details to the Postgres database you just istalled. Hit enter to accept the defaults and enter the password you entered during the database setup.
@@ -35,11 +35,11 @@ A simple ETL framework for Python, SQL and BAT files which uses a Postgres datab
   
   If your setup is successful, zetl will connect and list etl's available to run such as:
   
-  >demo1
-  >demo2
-  >demo3
-  >empty_log
-  
+    > demo1
+    > demo2
+    > demo3
+    > empty_log
+
   You can try running an ETL by passing it as an argument to zetl as follows:
   
   - zetl demo1
@@ -56,9 +56,10 @@ A simple ETL framework for Python, SQL and BAT files which uses a Postgres datab
   >extension must be either py, bat or sql
   
 - For example:
-    >zetl\zetl_scripts\demo1\1.hello.py
-    >zetl\zetl_scripts\demo1\2.something.sql
-    >zetl\zetl_scripts\demo1\3.hello.bat
+  
+    > zetl\zetl_scripts\demo1\1.hello.py
+    > zetl\zetl_scripts\demo1\2.something.sql
+    > zetl\zetl_scripts\demo1\3.hello.bat
 
 
 
