@@ -72,7 +72,12 @@ An ETL exists in the form of a directory, under zetl_scripts, with files of a sp
 
 ### create an ETL
 
-create a folder under zetl_scripts and add a file which follows the naming convention.
+create a folder under zetl_scripts and add a file which follows the naming convention step_number.activity.extension
+For example:
+
+- 1.anything.sql
+- 2.anythingelses.bat
+- 3.something.py
 
 ### run an ETL
 
