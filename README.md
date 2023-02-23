@@ -57,8 +57,7 @@ If your setup is successful, when you run zetl.py with no parameters, it will co
 
 ### What is an ETL in the zetl framework ?
 
-- An ETL exists in the form of a directory, under zetl_scripts, with files of a specific naming convention which are either python, windows bat, or sql.
-- The file naming convention is as follows: step_number.activity.extension
+An ETL exists in the form of a directory, under zetl_scripts, with files of a specific naming convention which are either python, windows bat, or sql.  The file naming convention is as follows: step_number.activity.extension
   
 > - *step_number* is any integer unique in the immediate folder
 > - *activity* is any alphanumeric name for the activity of the file
