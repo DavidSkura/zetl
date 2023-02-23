@@ -3,9 +3,6 @@ the zetl framework requires python and Postgres to run.
 
 ---
 
-## Local windows pc install
-
-
 ### 1. Install Python
 
 Download and install python (https://www.python.org/downloads/) to your local computer.
@@ -21,7 +18,9 @@ Download and install postgres (https://www.postgresql.org/download/) to your loc
 > - Username: postgres  
 > - Password: <whatever_you_supplied>
 
-### 3. download zetl (https://github.com/daveskura/zetl/archive/refs/heads/main.zip) and unzip to a local folder on your computer, such as c:\zetl
+### 3.Install zetl on Local windows pc 
+
+download zetl (https://github.com/daveskura/zetl/archive/refs/heads/main.zip) and unzip to a local folder on your computer, such as c:\zetl
   
 Folder will look like this:
   
