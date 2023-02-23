@@ -44,10 +44,10 @@ To run any zetl commands, go to the command line and change to the zetlt directo
 
 If your setup is successful, when you run zetl.py with no parameters, it will connect and list ETL's available to run such as:
   
-> demo1
-> demo2
-> demo3
-> empty_log
+> - demo1
+> - demo2
+> - demo3
+> - empty_log
 
 --- 
 
