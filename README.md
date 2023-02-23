@@ -2,7 +2,7 @@ A simple ETL framework for Python, SQL and BAT files which uses a Postgres datab
 
 
 ## Local computer install
-Download and install postgres to your local computer.  Remember the password.  After installing Postgres, your connection string will be:
+Download and install postgres (https://www.postgresql.org/download/) to your local computer.  Remember the password.  After installing Postgres, your connection string will be:
 
 ### host: localhost
 ### port: 1532
