@@ -51,7 +51,7 @@ If your setup is successful, when you run zetl.py with no parameters, it will co
 
 --- 
 
-## Usage
+### Usage
 
 --- 
 
