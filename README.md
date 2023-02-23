@@ -92,5 +92,5 @@ for example:
 
 Everytime an ETL runs, the z_log table is updated with the activity.  To see view the log, query the z_log table or run the ETL view_log as follows:
 
-zetl view_log
+> zetl view_log
 
