@@ -1,14 +1,14 @@
 """
   Dave Skura, 2022
 """
-from postgresdave_package.postgresdave import db #install pip install postgresdave-package
+from postgresdave_package.postgresdave import postgres_db #install pip install postgresdave-package
 import sys
 import os
 
 class zetldbaccess:
 
 	def __init__(self):
-		self.db = db()
+		self.db = postgres_db()
 		self.db.connect()
 
 		self.version=2.0
