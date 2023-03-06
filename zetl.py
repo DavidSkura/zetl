@@ -1,13 +1,56 @@
 """
   Dave Skura, Dec,2022
 """
-from zetldbfile import zetldbaccess
+from postgresdave_package.postgresdave import postgres_db #install pip install postgresdave-package
 
 import warnings
 import sys
 import os
 import re
 from datetime import *
+
+def main():
+	my_zetl = zetl()
+	if len(sys.argv) == 1 or sys.argv[1] == 'zetl.py': # no parameters
+		print('usage: ')
+		print('zetl.py [etl_name] ') 
+		print('')
+		my_zetl.zetldb.empty_zetl()						# empty the master zetl table
+		my_zetl.zetldb.load_folders_to_zetl() # load master zetl table from folders
+		my_zetl.show_etl_name_list()
+
+	else: # run the etl match the etl_name in the etl table
+		etl_name_to_run = sys.argv[1]
+		run_options=''
+		run_description = ''
+		if len(sys.argv) == 3:
+			run_options = sys.argv[2]
+			if run_options == '-f':
+				run_description = '  But first, overwriting table ' + my_zetl.DB_SCHEMA() + '.z_etl with file zetl_scripts\\' + etl_name_to_run + '\\z_etl.csv'
+
+		print('Running ' + etl_name_to_run + '.' + run_description)
+
+		my_zetl.zetldb.load_folders_to_zetl(etl_name_to_run)
+		if run_options == '-f':
+			my_zetl.zetldb.load_z_etlcsv_if_forced(etl_name_to_run,run_options)
+		else:
+			my_zetl.zetldb.export_zetl()
+
+		activity = my_zetl.get_current_activity()
+		if activity == 'idle' or my_zetl.force:
+			my_zetl.execute('DELETE FROM ' + my_zetl.DB_SCHEMA() + '.z_activity')
+			my_zetl.execute("INSERT INTO " + my_zetl.DB_SCHEMA() + ".z_activity(currently,previously) VALUES ('Running " + etl_name_to_run + "','" + activity + "')")
+
+			my_zetl.runetl(etl_name_to_run)
+
+			my_zetl.execute("UPDATE " + my_zetl.DB_SCHEMA() + ".z_activity SET currently = 'idle',previously='Running " + etl_name_to_run + "'")
+			my_zetl.commit()
+
+		else:
+			print("zetl is currently busy with '" + activity + "'")
+
+	sys.exit(0)
+
 
 class zetl:
 	def __init__(self):
@@ -20,12 +63,16 @@ class zetl:
 
 	def logstepstart(self,etl_name,stepnum,cmdfile,steptablename,query,ipart):
 
-		zsql = "INSERT INTO " + self.DB_SCHEMA() + ".z_log (etl_name,dbuser,stepnum,cmdfile,steptablename,"
-		zsql += "cmd_to_run,part,rundtm) VALUES ('" + etl_name + "',(SELECT current_user),"
-		zsql += str(stepnum) + ",'" + str(cmdfile) + "','" + steptablename + "','" 
-		zsql += query.replace('?','').replace("'","`") + "'," + str(ipart) + ", now()::timestamp);"
-		self.execute(zsql)
-		
+		try:
+			zsql = "INSERT INTO " + self.DB_SCHEMA() + ".z_log (etl_name,dbuser,stepnum,cmdfile,steptablename,"
+			zsql += "cmd_to_run,part,rundtm) VALUES ('" + etl_name + "',(SELECT current_user),"
+			zsql += str(stepnum) + ",'" + str(cmdfile) + "','" + steptablename + "','" 
+			zsql += query.replace('?','').replace("'","`") + "'," + str(ipart) + ", now()::timestamp);"
+			self.execute(zsql)
+		except:
+			self.zetldb.create_table('z_log')
+			self.execute(zsql)
+
 		lid = self.queryone("SELECT max(id) FROM " + self.DB_SCHEMA() + ".z_log ")
 		return lid
 
@@ -76,8 +123,8 @@ class zetl:
 
 		usql = "UPDATE  " + self.DB_SCHEMA() + ".z_log SET database='" + database.replace("'",'`') + "', script_output = '" + script_output.replace("'","`") + "', script_error = '" + script_error.replace("'","`") + "', endtime = now()::timestamp WHERE id = " + str(lid) 
 		try:
-			self.zetldb.db.execute(usql)
-			self.zetldb.db.commit()
+			self.execute(usql)
+			self.commit()
 		except Exception as e:
 			print(str(e))
 
@@ -208,16 +255,22 @@ class zetl:
 
 
 	def get_current_activity(self):
-		sql = """
-			SELECT *
-			FROM (
-					SELECT currently,activity_type FROM """ + self.DB_SCHEMA() + """.z_activity
-					UNION
-					SELECT '' as currently,'default' as activity_type
-					) L
-			ORDER BY 1 desc
-		"""
-		data = self.zetldb.db.query(sql)
+		try:
+			sql = """
+				SELECT *
+				FROM (
+						SELECT currently,activity_type FROM """ + self.DB_SCHEMA() + """.z_activity
+						UNION
+						SELECT '' as currently,'default' as activity_type
+						) L
+				ORDER BY 1 desc
+			"""
+			data = self.zetldb.db.query(sql)
+
+		except:
+
+			self.zetldb.create_table('z_activity')
+			data = self.zetldb.db.query(sql)
 
 		if data[0][1] == 'default':
 			return_value = 'idle'
@@ -309,50 +362,196 @@ class zetl:
 	def queryone(self,prm):
 		return self.zetldb.db.queryone(prm)
 
+
+class zetldbaccess:
+
+	def __init__(self):
+		self.db = postgres_db()
+		self.db.connect()
+
+		self.version=2.0
+
+	def	createtables(self):
+		install_ddl = '.\\install_ddl\\'
+		ddl_files = os.listdir(install_ddl)
+		for i in range(0,len(ddl_files)):
+			ddl_file = ddl_files[i]
+			tablename = ddl_file.split('.')[0]
+			
+			print('Found ' + ddl_file)
+			if not self.db.does_table_exist(tablename):
+
+				print('Table ' + tablename + ' does not exist.  Creating it from file: '  + ddl_file)
+
+				fh = open(install_ddl + ddl_file,'r')
+				ddl = fh.read()
+				fh.close()
+
+				# add schema prefix
+				ddl = ddl.replace('CREATE TABLE ','CREATE TABLE ' + self.db.db_conn_dets.DB_SCHEMA + '.')
+				ddl = ddl.replace('COMMENT ON TABLE ','COMMENT ON TABLE ' + self.db.db_conn_dets.DB_SCHEMA + '.')
+				try:
+					self.db.execute(ddl)
+					print('Table ' + tablename + ' created. ')
+				except Exception as e:
+					raise Exception('Cannot create table ' + tablename + '\n' + str(e))
+					
+	def export_zetl(self):
+		
+		etl_list = self.db.query('SELECT DISTINCT etl_name FROM ' + self.db.db_conn_dets.DB_SCHEMA + '.z_etl ORDER BY etl_name')
+		for etl in etl_list:
+			etl_name = etl[0]
+			qry = "SELECT stepnum,cmdfile,steptablename,estrowcount FROM " + self.db.db_conn_dets.DB_SCHEMA + ".z_etl WHERE etl_name = '" + etl_name + "' ORDER BY stepnum"
+			csv_filename = 'zetl_scripts\\' + etl_name + '\\z_etl.csv'
+			self.db.export_query_to_csv(qry,csv_filename)
+
+	def empty_zetl(self):
+		try:
+			dsql = "DELETE FROM " + self.db.db_conn_dets.DB_SCHEMA + ".z_etl "
+			self.db.execute(dsql)
+			self.db.commit()
+		except:
+			self.create_table('z_etl')
+
+	def create_table(self,tbl):
+		csql = "SELECT 'cannot create table " + tbl + "' as CREATE "
+		if tbl.lower() == 'z_etl':
+			csql = """
+			CREATE TABLE """ + self.db.db_conn_dets.DB_SCHEMA + """.z_etl (
+				etl_name varchar(100) DEFAULT NULL, 
+				stepnum NUMERIC(10,2) DEFAULT NULL, 
+				steptablename varchar(250) DEFAULT '', 
+				estrowcount BIGINT  DEFAULT -1, 
+				cmdfile varchar(250) DEFAULT '', 
+				cmd_to_run varchar(12000) DEFAULT '', 
+				note varchar(1024) DEFAULT '', 
+				dtm TIMESTAMP DEFAULT now()::timestamp 
+			);
+
+			COMMENT ON TABLE """ + self.db.db_conn_dets.DB_SCHEMA + """.z_etl IS 'This is the Master etl table.  When calling run_etl.py <etl_name> .. all lines matching etl_name here are executed.';
+			"""
+		elif tbl.lower() == 'z_activity':
+			csql = """
+			CREATE TABLE """ + self.db.db_conn_dets.DB_SCHEMA + """.z_activity (
+				activity_type varchar(250) Primary key DEFAULT 'Primary', 
+				currently varchar(250) DEFAULT 'idle', 
+				previously varchar(250) DEFAULT NULL, 
+				keyfld varchar(250) DEFAULT '', 
+				prvkeyfld varchar(250) DEFAULT '', 
+				dtm TIMESTAMP DEFAULT now()::timestamp
+			);
+
+			"""
+		elif tbl.lower() == 'z_log':
+			csql = """
+			CREATE TABLE """ + self.db.db_conn_dets.DB_SCHEMA + """.z_log (
+				id SERIAL NOT NULL primary key, 
+				dbuser varchar(100) DEFAULT NULL, 
+				rundtm timestamp DEFAULT now()::timestamp, 
+				etl_name varchar(100) DEFAULT NULL, 
+				stepnum NUMERIC(5,1) DEFAULT NULL, 
+				part INTEGER DEFAULT 1, 
+				steptablename varchar(250) DEFAULT NULL, 
+				rowcount BIGINT, 
+				starttime TIMESTAMP DEFAULT now()::timestamp,  
+				endtime TIMESTAMP, 
+				cmd_to_run varchar(8124) DEFAULT NULL, 
+				script_output varchar(8124) DEFAULT NULL, 
+				script_error varchar(255) DEFAULT NULL, 
+				cmdfile varchar(250) DEFAULT NULL, 
+				database varchar(250) DEFAULT NULL, 
+				dtm TIMESTAMP DEFAULT now()::timestamp
+			);
+
+			COMMENT ON TABLE """ + self.db.db_conn_dets.DB_SCHEMA + """.z_log IS 'Global log table.  Every sql which is run from zetl.py is logged here.';
+			"""
+		self.db.execute(csql)
+		self.db.commit()
+
+	def load_z_etlcsv_if_forced(self,etl_name='',option=''):
+		szdelimiter = ','
+		if (etl_name != '' and option == '-f'):
+			self.empty_zetl()
+			qualified_table = self.db.db_conn_dets.DB_SCHEMA + ".z_etl"
+			csv_filename = 'zetl_scripts\\' + etl_name + '\\z_etl.csv'
+			f = open(csv_filename,'r')
+			hdrs = f.read(1000).split('\n')[0].strip().split(szdelimiter)
+			f.close()		
+			
+			isqlhdr = 'INSERT INTO ' + qualified_table + '('
+
+			for i in range(0,len(hdrs)):
+				isqlhdr += hdrs[i] + ','
+			isqlhdr = isqlhdr[:-1] + ') VALUES '
+
+			skiprow1 = 0
+			ilines = ''
+
+			with open(csv_filename) as myfile:
+				for line in myfile:
+					if skiprow1 == 0:
+						skiprow1 = 1
+					else:
+						row = line.rstrip("\n").split(szdelimiter)
+
+						newline = '('
+						for j in range(0,len(row)):
+							if row[j].lower() == 'none' or row[j].lower() == 'null':
+								newline += "NULL,"
+							else:
+								newline += "'" + row[j].replace(',','').replace("'",'') + "',"
+							
+						ilines += newline[:-1] + ')'
+						
+						qry = isqlhdr + ilines
+						ilines = ''
+						self.db.execute(qry)
+						self.db.commit()
+
+	def is_an_int(self,prm):
+			try:
+				if int(prm) == int(prm):
+					return True
+				else:
+					return False
+			except:
+					return False
+
+	def add_etl_step(self,p_etl_name,p_etl_step,p_etl_filename):
+		isql = "INSERT INTO " + self.db.db_conn_dets.DB_SCHEMA + ".z_etl(etl_name,stepnum,cmdfile) VALUES ('" + p_etl_name + "'," + p_etl_step + ",'" + p_etl_filename + "')"
+		self.db.execute(isql)
+		self.db.commit()
+		#print('Adding ' + p_etl_name + '\\' + p_etl_filename)
+
+	def etl_step_exists(self,etl_name,etl_step):
+		sql = "SELECT COUNT(*) FROM " + self.db.db_conn_dets.DB_SCHEMA + ".z_etl WHERE etl_name = '" + etl_name + "' and stepnum = " + etl_step
+		etlrowcount = self.db.queryone(sql)
+		if etlrowcount == 0:
+			return False
+		else:
+			return True
+
+	def load_folders_to_zetl(self,this_etl_name='all'):
+		etl_folder = 'zetl_scripts'
+		subdirs = [x[0] for x in os.walk(etl_folder)]
+		for i in range(0,len(subdirs)):
+			possible_etl_dir = subdirs[i]
+			if len(possible_etl_dir.split('\\')) == 2:
+				etl_name = possible_etl_dir.split('\\')[1]
+				if (this_etl_name == 'all' or etl_name == this_etl_name):
+					
+					dir_list = os.listdir(etl_folder + '\\' + etl_name)
+					for etl_script_file in os.listdir(etl_folder + '\\' + etl_name):
+						if etl_script_file.endswith(".sql") or etl_script_file.endswith(".ddl") or etl_script_file.endswith(".py") or etl_script_file.endswith(".bat"):
+							if len(etl_script_file.split('.')) == 3:
+								etl_step = etl_script_file.split('.')[0]
+								file_suffix = etl_script_file.split('.')[1] + '.' + etl_script_file.split('.')[2]
+								if self.is_an_int(etl_step):
+									if not self.etl_step_exists(etl_name,etl_step):
+										self.add_etl_step(etl_name,etl_step,etl_script_file)		
+
 if __name__ == '__main__':
-	my_zetl = zetl()
-	if len(sys.argv) == 1 or sys.argv[1] == 'zetl.py': # no parameters
-		print('usage: ')
-		print('zetl.py [etl_name] ') 
-		print('')
-		my_zetl.zetldb.empty_zetl()						# empty the master zetl table
-		my_zetl.zetldb.load_folders_to_zetl() # load master zetl table from folders
-		#my_zetl.zetldb.export_zetl() # exporting from the database to csv file.
-		my_zetl.show_etl_name_list()
-
-	else: # run the etl match the etl_name in the etl table
-		etl_name_to_run = sys.argv[1]
-		run_options=''
-		run_description = ''
-		if len(sys.argv) == 3:
-			run_options = sys.argv[2]
-			if run_options == '-f':
-				run_description = '  But first, overwriting table ' + my_zetl.DB_SCHEMA() + '.z_etl with file zetl_scripts\\' + etl_name_to_run + '\\z_etl.csv'
-
-		print('Running ' + etl_name_to_run + '.' + run_description)
-
-		my_zetl.zetldb.load_folders_to_zetl(etl_name_to_run)
-		if run_options == '-f':
-			my_zetl.zetldb.load_z_etlcsv_if_forced(etl_name_to_run,run_options)
-		else:
-			my_zetl.zetldb.export_zetl()
-
-		activity = my_zetl.get_current_activity()
-		if activity == 'idle' or my_zetl.force:
-			my_zetl.execute('DELETE FROM ' + my_zetl.DB_SCHEMA() + '.z_activity')
-			my_zetl.execute("INSERT INTO " + my_zetl.DB_SCHEMA() + ".z_activity(currently,previously) VALUES ('Running " + etl_name_to_run + "','" + activity + "')")
-
-			my_zetl.runetl(etl_name_to_run)
-
-			my_zetl.execute("UPDATE " + my_zetl.DB_SCHEMA() + ".z_activity SET currently = 'idle',previously='Running " + etl_name_to_run + "'")
-			my_zetl.commit()
-
-		else:
-			print("zetl is currently busy with '" + activity + "'")
-
-
-	sys.exit(0)
-
+	main()
 
 		
 
