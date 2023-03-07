@@ -31,24 +31,33 @@ Just install with pip
 pip install zetl
 ```
   
-Folder will look like this:
+Wherever you run zetl, it will look for a folder called zetl_scripts, where all your etl folders are stored.
   
-> - zetl
-> - zetl\examples
-> - zetl\install_ddl
-> - zetl\zetl_scripts
+> zetl_scripts
 
-### 3. Run setup.bat
+In the tests folder on git hub you can see examples of etl folders, and etl scripts under the zetl_scripts folder.
+
+>
+> zetl_scripts\demo1
+> zetl_scripts\demo2
+> zetl_scripts\demo3
+> zetl_scripts\empty_log
+> zetl_scripts\view_log
+>
+
+
+### 3. Run zetl
+
+```
+py -m zetl.run
+```
   
-This will install the neccessary python packages and prompt for connection details to the Postgres database you just istalled. Hit enter to accept the defaults and enter the password you entered during the database setup.
+This prompt for connection details to the Postgres database you just istalled. 
+Hit enter to accept the defaults and enter the password you entered during the database setup.
   
-setup will then connect to postgres and create the 3 tables required by zetl.
-> - z_activity
-> - z_log
-> - z_etl
  
-### 4. Run zetl.py
-  
+### 4. Run zetl commands
+
 To run any zetl commands, go to the command line and change to the zetl directory.  eg. CD \zetl
 
 If your setup is successful, when you run zetl.py with no parameters, it will connect and list ETL's available to run such as:
