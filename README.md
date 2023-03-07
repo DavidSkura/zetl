@@ -9,7 +9,12 @@ Download and install python (https://www.python.org/downloads/) to your local co
 
 ### 2. Install Postgres
 
-Download and install postgres (https://www.postgresql.org/download/) to your local computer.  Remember the password.  After installing Postgres, your connection string will be:
+Download and install postgres (https://www.postgresql.org/download/) to your local computer.  Remember the password.  
+When you run zetl it will prompt you for database connection details.  At the end of prompting, it will ask if you want
+to save the connection details (y/n).  If you select y, the details are saved in that folder and you aren't prompted again
+unless the details fail on connect. 
+
+Here are the defaults for postgtres:
 
 > - host: localhost
 > - port: 1532
@@ -18,9 +23,13 @@ Download and install postgres (https://www.postgresql.org/download/) to your loc
 > - Username: postgres  
 > - Password: <whatever_you_supplied>
 
-### 3.Install zetl on Local windows pc 
+### 3.Install zetl 
 
-download zetl (https://github.com/daveskura/zetl/archive/refs/heads/main.zip) and unzip to a local folder on your computer, such as c:\zetl
+Just install with pip
+
+```
+pip install zetl
+```
   
 Folder will look like this:
   
