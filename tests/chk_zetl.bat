@@ -3,4 +3,5 @@ REM
 REM  Dave Skura, 2023
 REM
 
-zetl.py
+py -m zetl.run
+pause
