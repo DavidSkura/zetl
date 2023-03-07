@@ -1,3 +1,5 @@
 
 .pwd
 tests/.schemawiz_config1
+src/zetl/.schemawiz_config1
+src/zetl/.schemawiz_config2
