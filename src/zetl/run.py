@@ -11,9 +11,15 @@ from datetime import *
 
 def main():
 	my_zetl = zetl()
-	if len(sys.argv) == 1 or sys.argv[1] == 'zetl.py': # no parameters
+	if len(sys.argv) == 1 or sys.argv[1] == 'run.py': # no parameters
 		print('usage: ')
-		print('zetl.py [etl_name] ') 
+		print('py -m zetl.run [etl_name] ') 
+		print('')
+		print('py -m zetl.postgres_import [csv_filename] [tablename] [WithTruncate]') 
+		print('py -m zetl.postgres_export [tablename] [csvfilename] [delimiter] ') 
+		print('')
+		print('py -m zetl.mysql_import [csv_filename] [tablename] [WithTruncate]') 
+		print('py -m zetl.mysql_export [tablename] [csvfilename] [delimiter] ') 
 		print('')
 		my_zetl.zetldb.empty_zetl()						# empty the master zetl table
 		my_zetl.zetldb.load_folders_to_zetl() # load master zetl table from folders

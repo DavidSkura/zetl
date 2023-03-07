@@ -1,11 +1,11 @@
 [build-system]
-requires = ["hatchling","postgresdave_package"]
+requires = ["hatchling","schemawizard_package"]
 
 build-backend = "hatchling.build"
 
 [project]
 name = "zetl"
-version = "0.0.3"
+version = "0.0.4"
 authors = [
   { name="Dave Skura", email="dskura@gmail.com" },
 ]
