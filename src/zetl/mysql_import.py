@@ -43,15 +43,32 @@ class dbimport():
 		if ((tablename != '') and (dber.dbthings.mysql_db.does_table_exist(tablename))):
 			dber.justload_mysql_from_csv(csv_filename,tablename,WithTruncate)
 		else:
-			tbl = dber.createload_mysql_from_csv(csv_filename,tablename)
+			output_ddl_filename = 'z.' + self.getoutputfilename(csv_filename,tablename) + '.ddl'
+			tbl = dber.createload_mysql_from_csv(csv_filename,tablename,output_ddl_filename)
 
 		print(dber.dbthings.mysql_db.queryone('SELECT COUNT(*) FROM ' + tbl))
 		dber.dbthings.mysql_db.close()
 
 		print('mysql_import Done')
+	def getoutputfilename(self,csv_filename,ddl_output_filename):
+		# zetl_scripts/someetl/thisfile.csv
+		filedelimiter = '\\'
+		if csv_filename.find('/') > -1:
+			filedelimiter = '/'
 
+		newfile = ''
+		partlist = csv_filename.split(filedelimiter)
+		if partlist[0] != csv_filename:
+			for i in range(0,len(partlist)-1):
+				newfile += partlist[i] + filedelimiter
+
+		newfile += ddl_output_filename
+		return newfile
 
 if __name__ == '__main__':
+	# myexp = dbimport('sample.csv','sample8',True)
+	# tbl = schemawiz().createload_mysql_from_csv('CanadianPostalCodes.csv','thistbl')
+
 	main()
 
 		

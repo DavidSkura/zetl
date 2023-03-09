@@ -2,6 +2,7 @@
   Dave Skura, Dec,2022
 """
 from postgresdave_package.postgresdave import postgres_db #install pip install postgresdave-package
+from mysqldave_package.mysqldave import mysql_db #install pip install mysqldave-package
 
 import warnings
 import sys
@@ -12,56 +13,57 @@ from datetime import *
 def main():
 	my_zetl = zetl()
 	if len(sys.argv) == 1 or sys.argv[1] == 'run.py': # no parameters
+		print('')
 		print('usage: ')
 		print('py -m zetl.run [etl_name] ') 
-		print('')
+		print('py -m zetl.view [etl_name] ') 
+		print(' ')
 		print('py -m zetl.postgres_import [csv_filename] [tablename] [WithTruncate]') 
 		print('py -m zetl.postgres_export [tablename] [csvfilename] [delimiter] ') 
-		print('')
+		print(' ')
 		print('py -m zetl.mysql_import [csv_filename] [tablename] [WithTruncate]') 
 		print('py -m zetl.mysql_export [tablename] [csvfilename] [delimiter] ') 
-		print('')
+		print('-----------')
 		my_zetl.zetldb.empty_zetl()						# empty the master zetl table
 		my_zetl.zetldb.load_folders_to_zetl() # load master zetl table from folders
 		my_zetl.show_etl_name_list()
 
 	else: # run the etl match the etl_name in the etl table
 		etl_name_to_run = sys.argv[1]
-		run_options=''
-		run_description = ''
-		if len(sys.argv) == 3:
-			run_options = sys.argv[2]
-			if run_options == '-f':
-				run_description = '  But first, overwriting table ' + my_zetl.DB_SCHEMA() + '.z_etl with file zetl_scripts\\' + etl_name_to_run + '\\z_etl.csv'
-
-		print('Running ' + etl_name_to_run + '.' + run_description)
-
-		my_zetl.zetldb.load_folders_to_zetl(etl_name_to_run)
-		if run_options == '-f':
-			my_zetl.zetldb.load_z_etlcsv_if_forced(etl_name_to_run,run_options)
-		else:
-			my_zetl.zetldb.export_zetl()
-
-		activity = my_zetl.get_current_activity()
-		if activity == 'idle' or my_zetl.force:
-			my_zetl.execute('DELETE FROM ' + my_zetl.DB_SCHEMA() + '.z_activity')
-			my_zetl.execute("INSERT INTO " + my_zetl.DB_SCHEMA() + ".z_activity(currently,previously) VALUES ('Running " + etl_name_to_run + "','" + activity + "')")
-
-			my_zetl.runetl(etl_name_to_run)
-
-			my_zetl.execute("UPDATE " + my_zetl.DB_SCHEMA() + ".z_activity SET currently = 'idle',previously='Running " + etl_name_to_run + "'")
-			my_zetl.commit()
-
-		else:
-			print("zetl is currently busy with '" + activity + "'")
+		my_zetl.proper_run(etl_name_to_run)
 
 	sys.exit(0)
 
 
 class zetl:
+	def forcerun(self,etl_name_to_run):
+		self.force = True
+		self.proper_run(etl_name_to_run)
+
+	def proper_run(self,etl_name_to_run):
+		print('Running ' + etl_name_to_run)
+
+		self.zetldb.load_folders_to_zetl(etl_name_to_run)
+		self.zetldb.export_zetl()
+
+		activity = self.get_current_activity()
+		if activity == 'idle' or self.force:
+			self.execute('DELETE FROM ' + self.DB_SCHEMA() + '.z_activity')
+			self.execute("INSERT INTO " + self.DB_SCHEMA() + ".z_activity(currently,previously) VALUES ('Running " + etl_name_to_run + "','" + activity + "')")
+
+			self.runetl(etl_name_to_run)
+
+			self.execute("UPDATE " + self.DB_SCHEMA() + ".z_activity SET currently = 'idle',previously='Running " + etl_name_to_run + "'")
+			self.commit()
+
+		else:
+			print("zetl is currently busy with '" + activity + "'.  You can wait for it to finish or call zetl.forcerun(etlname).")
+
 	def __init__(self):
 		#now = (datetime.now())
 		#sztoday=str(now.year) + '-' + ('0' + str(now.month))[-2:] + '-' + str(now.day)
+		self.silent_on = False
+		self.tempfilename = 'zetl_pythonscript_temp.log'
 
 		self.force = True
 
@@ -125,7 +127,15 @@ class zetl:
 
 		return ret
 
-	def log_script_error(self,lid,script_error,database='',script_output=''):
+	def log_script_error(self,lid,pscript_error,database='',pscript_output=''):
+		script_error = pscript_error
+		if len(pscript_error) > 250:
+			script_error = pscript_error[250:]
+
+		script_output = pscript_output
+		if len(pscript_output) > 8100:
+			script_output = pscript_output[-8100:]
+
 
 		usql = "UPDATE  " + self.DB_SCHEMA() + ".z_log SET database='" + database.replace("'",'`') + "', script_output = '" + script_output.replace("'","`") + "', script_error = '" + script_error.replace("'","`") + "', endtime = now()::timestamp WHERE id = " + str(lid) 
 		try:
@@ -174,16 +184,20 @@ class zetl:
 
 				try:
 					if script_variables['DB_TYPE'] != '': # dont use default connection
-						new_postgresdb = db()
+						new_postgresdb = postgres_db()
 						new_mysqldb = mysql_db()
 
 						if script_variables['DB_TYPE'].strip().upper() == 'POSTGRES':
-							script_output, database = self.connect_and_run(script_variables,new_postgresdb,individual_query)
+							self.connect_mysql(new_postgresdb,script_variables)
+
+							script_output, database = self.run_db_query(new_postgresdb,individual_query)
 							database = script_variables['DB_TYPE'] + ': ' + database
 							self.logend_steptable(new_postgresdb,lid,script_variables,steptablename,script_output,database)
 
 						elif script_variables['DB_TYPE'].strip().upper() == 'MYSQL':
-							script_output, database = self.connect_and_run(script_variables,new_mysqldb,individual_query)
+							self.connect_mysql(new_mysqldb,script_variables)
+
+							script_output, database = self.run_db_query(new_mysqldb,individual_query)
 							database = script_variables['DB_TYPE'] + ': ' + database
 							self.logend_steptable(new_mysqldb,lid,script_variables,steptablename,script_output,database)
 
@@ -209,15 +223,34 @@ class zetl:
 					print(str(e))
 					sys.exit(1)
 
-	def connect_and_run(self,script_variables,dbconn,individual_query):
-		script_output = ''
+	def connect_postgres(self,postgresdb,script_variables):
+		if script_variables['DB_HOST'] != '': # variables set in file.  use them to connect
+			postgresdb.useConnectionDetails(script_variables['DB_USERNAME']
+							,script_variables['DB_USERPWD']
+							,script_variables['DB_HOST']
+							,script_variables['DB_PORT']
+							,script_variables['DB_NAME']
+							,script_variables['DB_SCHEMA']
+							)
+		else: # use default mysql connection
+			postgresdb.connect()
+		print(postgresdb.dbstr())
 
-		dbconn.useConnectionDetails(script_variables['DB_USERNAME']
-						,script_variables['DB_USERPWD']
-						,script_variables['DB_HOST']
-						,script_variables['DB_PORT']
-						,script_variables['DB_NAME']
-						,script_variables['DB_SCHEMA'])
+	def connect_mysql(self,mysqldb,script_variables):
+		if script_variables['DB_HOST'] != '': # variables set in file.  use them to connect
+			mysqldb.useConnectionDetails(script_variables['DB_USERNAME']
+							,script_variables['DB_USERPWD']
+							,script_variables['DB_HOST']
+							,script_variables['DB_PORT']
+							,script_variables['DB_NAME']
+							)
+		else: # use default mysql connection
+			mysqldb.connect()
+		print(mysqldb.dbstr())
+
+
+	def run_db_query(self,dbconn,individual_query):
+		script_output = ''
 
 		if individual_query.strip().upper().find('SELECT') == 0:
 			results = dbconn.export_query_to_str(individual_query)
@@ -233,29 +266,43 @@ class zetl:
 
 
 	def logend_steptable(self,dbconn,lid,script_variables,steptablename,script_output,database=''):
-		if script_variables['DB_USERNAME'] != '': # dont use default connection
+		tblrowcount = 0
+		qualified_table = ''
+		if script_variables['DB_TYPE'] != '': # dont use default connection
+			if script_variables['DB_TYPE'].upper() == 'MYSQL':
+				qualified_table = steptablename
+			elif (script_variables['DB_TYPE'].upper() == 'POSTGRES'):
+				try:
+					this_table = steptablename.split('.')[1]
+					this_schema = steptablename.split('.')[0]
+				except:
+					this_table = steptablename
+					if script_variables['DB_SCHEMA'] != '':
+						this_schema = script_variables['DB_SCHEMA']
+					else:
+						this_schema = 'public'
+				qualified_table = this_schema + '.' + this_table
+				if dbconn.does_table_exist(qualified_table):
+					tblrowcount = dbconn.queryone("SELECT COUNT(*) FROM " + qualified_table)
+					dbconn.close()
+
+			else:
+				print('DB_TYPE must be Postgres or MySQL')
+
+		else: # use default postgres connection
 			try:
 				this_table = steptablename.split('.')[1]
 				this_schema = steptablename.split('.')[0]
 			except:
-				if script_variables['DB_SCHEMA'] !='':
+				this_table = steptablename
+				if script_variables['DB_SCHEMA'] != '':
 					this_schema = script_variables['DB_SCHEMA']
 				else:
 					this_schema = 'public'
-				this_table = steptablename
-		else: # use default connection
-			this_schema = steptablename.split('.')[0]
-			try:
-				this_table = steptablename.split('.')[1]
-			except:
-				this_schema = dbconn.db_conn_dets.DB_SCHEMA
-				this_table = steptablename.split('.')[0]
-
-		qualified_table = this_schema + '.' + this_table
-		tblrowcount = 0
-		if dbconn.does_table_exist(qualified_table):
-			tblrowcount = dbconn.queryone("SELECT COUNT(*) FROM " + qualified_table)
-			dbconn.close()
+			qualified_table = this_schema + '.' + this_table
+			if dbconn.does_table_exist(qualified_table):
+				tblrowcount = dbconn.queryone("SELECT COUNT(*) FROM " + qualified_table)
+				dbconn.close()
 
 		self.logstepend(lid,tblrowcount,script_output,database)
 
@@ -286,11 +333,11 @@ class zetl:
 		return return_value
 
 	def runetl(self,etl_name):
-		tempfilename = 'zetl_pythonscript_temp.log'
-		try:
-			os.remove(tempfilename)
-		except:
-			pass
+		if self.silent_on:
+			try:
+				os.remove(tempfilename)
+			except:
+				pass
 		sql = """
 		SELECT stepnum,steptablename,cmdfile 
 		FROM """ + self.DB_SCHEMA() + """.z_etl 
@@ -300,6 +347,7 @@ class zetl:
 		#print(sql)
 		data = self.zetldb.db.query(sql)
 		for row in data:
+			consoleoutput = ''
 			stepnum = row[0]
 			steptablename = row[1]
 			cmdfile = row[2]
@@ -315,12 +363,17 @@ class zetl:
 				lid = self.logstepstart(etl_name,stepnum,cmdfile,steptablename,'Python script',0)
 
 				print('\n file ' + cmdfile + '\n')
+				cmd_to_run = 'py ' + foundfile
+				if self.silent_on:
+					cmd_to_run += ' > ' + tempfilename
 
-				exit_code = os.system('py ' + foundfile  + ' > ' + tempfilename)
+				print(cmd_to_run)
+				exit_code = os.system(cmd_to_run)
 
-				f = open(tempfilename,'r')
-				consoleoutput = f.read()
-				f.close()
+				if self.silent_on:
+					f = open(tempfilename,'r')
+					consoleoutput = f.read()
+					f.close()
 
 				if exit_code != 0:
 					print(consoleoutput + '\n exit_code=' + str(exit_code))
@@ -329,17 +382,22 @@ class zetl:
 
 					sys.exit(exit_code)
 
-				print(consoleoutput)
 				self.logstepend(lid,0,consoleoutput.strip(),self.zetldb.db.dbstr())
 
 			elif cmdfile.lower().endswith('.bat'):
 				lid = self.logstepstart(etl_name,stepnum,cmdfile,steptablename,'Windows bat script',0)
 
 				print('\n file ' + cmdfile + '\n')
-				exit_code = os.system(foundfile + ' > ' + tempfilename)
-				f = open(tempfilename,'r')
-				consoleoutput = f.read()
-				f.close()
+				cmd_to_run = foundfile
+				if self.silent_on:
+					cmd_to_run += ' > ' + tempfilename
+
+				exit_code = os.system(cmd_to_run)
+
+				if self.silent_on:
+					f = open(tempfilename,'r')
+					consoleoutput = f.read()
+					f.close()
 				
 				if exit_code != 0:
 					print(consoleoutput + '\n exit_code=' + str(exit_code))
@@ -348,7 +406,6 @@ class zetl:
 
 					sys.exit(exit_code)
 
-				print(consoleoutput)
 				self.logstepend(lid,0,consoleoutput.strip(),self.zetldb.db.dbstr())
 
 	def show_etl_name_list(self):
@@ -402,18 +459,23 @@ class zetldbaccess:
 				except Exception as e:
 					raise Exception('Cannot create table ' + tablename + '\n' + str(e))
 					
-	def export_zetl(self):
-		
-		etl_list = self.db.query('SELECT DISTINCT etl_name FROM ' + self.db.db_conn_dets.DB_SCHEMA + '.z_etl ORDER BY etl_name')
+	def export_zetl(self,etl_name =''):
+		zsql = ' SELECT DISTINCT etl_name FROM ' + self.db.db_conn_dets.DB_SCHEMA + '.z_etl '
+		if etl_name != '':
+			zsql += "WHERE upper(etl_name) like upper('" + etl_name + "') "
+		zsql += ' ORDER BY etl_name '
+		etl_list = self.db.query(zsql)
 		for etl in etl_list:
 			etl_name = etl[0]
 			qry = "SELECT stepnum,cmdfile,steptablename,estrowcount FROM " + self.db.db_conn_dets.DB_SCHEMA + ".z_etl WHERE etl_name = '" + etl_name + "' ORDER BY stepnum"
 			csv_filename = 'zetl_scripts\\' + etl_name + '\\z_etl.csv'
 			self.db.export_query_to_csv(qry,csv_filename)
 
-	def empty_zetl(self):
+	def empty_zetl(self,etl_name=''):
 		try:
 			dsql = "DELETE FROM " + self.db.db_conn_dets.DB_SCHEMA + ".z_etl "
+			if etl_name != '':
+				dsql += " WHERE upper(etl_name) like upper('" + etl_name + "') "
 			self.db.execute(dsql)
 			self.db.commit()
 		except:
@@ -558,6 +620,8 @@ class zetldbaccess:
 
 if __name__ == '__main__':
 	main()
+	#zetl().forcerun('LoadPostalCodes')
 
 		
+
 
