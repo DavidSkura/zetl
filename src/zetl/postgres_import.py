@@ -49,9 +49,8 @@ class dbimport():
 			tbl = dber.createload_postgres_from_csv(csv_filename,tablename,output_ddl_filename)
 
 		print(dber.dbthings.postgres_db.queryone('SELECT COUNT(*) FROM ' + tbl))
-		#dber.dbthings.postgres_db.close()
 
-		print('postgres_import Done')
+		print(csv_filename + ' imported to ' + tbl)
 
 	def getoutputfilename(self,csv_filename,ddl_output_filename):
 		# zetl_scripts/someetl/thisfile.csv

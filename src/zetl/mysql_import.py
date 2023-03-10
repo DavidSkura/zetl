@@ -49,7 +49,8 @@ class dbimport():
 		print(dber.dbthings.mysql_db.queryone('SELECT COUNT(*) FROM ' + tbl))
 		dber.dbthings.mysql_db.close()
 
-		print('mysql_import Done')
+		print(csv_filename + ' imported to ' + tbl)
+
 	def getoutputfilename(self,csv_filename,ddl_output_filename):
 		# zetl_scripts/someetl/thisfile.csv
 		filedelimiter = '\\'

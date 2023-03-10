@@ -45,7 +45,7 @@ class dbexport():
 		self.mydb.export_table_to_csv(csv_filename,tablename,delimiter)
 		self.mydb.close()
 
-		print('Done')
+		print(tablename + ' exported to ' + csv_filename)
 
 
 if __name__ == '__main__':
