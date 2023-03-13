@@ -30,19 +30,21 @@ def main():
 
 	else: # run the etl match the etl_name in the etl table
 		etl_name_to_run = sys.argv[1]
-		my_zetl.proper_run(etl_name_to_run)
+		run_parameter = ''
+		if len(sys.argv) > 2:
+			run_parameter = sys.argv[2] # ARGV1 in the .sql files in zetl_scripts
+		my_zetl.proper_run(etl_name_to_run,run_parameter)
 
 	sys.exit(0)
 
 
 class zetl:
-	def forcerun(self,etl_name_to_run):
+	def forcerun(self,etl_name_to_run,run_parameter=''):
 		self.force = True
-		self.proper_run(etl_name_to_run)
+		self.proper_run(etl_name_to_run,run_parameter)
 
-	def proper_run(self,etl_name_to_run):
+	def proper_run(self,etl_name_to_run,run_parameter=''):
 		print('Running ' + etl_name_to_run)
-
 		self.zetldb.load_folders_to_zetl(etl_name_to_run)
 		self.zetldb.export_zetl()
 
@@ -51,13 +53,14 @@ class zetl:
 			self.execute('DELETE FROM ' + self.DB_SCHEMA() + '.z_activity')
 			self.execute("INSERT INTO " + self.DB_SCHEMA() + ".z_activity(currently,previously) VALUES ('Running " + etl_name_to_run + "','" + activity + "')")
 
-			self.runetl(etl_name_to_run)
+			print(etl_name_to_run)
+			self.runetl(etl_name_to_run,run_parameter)
 
 			self.execute("UPDATE " + self.DB_SCHEMA() + ".z_activity SET currently = 'idle',previously='Running " + etl_name_to_run + "'")
 			self.commit()
 
 		else:
-			print("zetl is currently busy with '" + activity + "'.  You can wait for it to finish or call zetl.forcerun(etlname).")
+			print("zetl is currently busy with '" + activity + "'.  You can wait for it to finish or call zetl.forcerun(etlname,run_parameter).")
 
 	def __init__(self):
 		#now = (datetime.now())
@@ -144,14 +147,15 @@ class zetl:
 		except Exception as e:
 			print(str(e))
 
-	def run_one_etl_step(self,etl_name,stepnum,steptablename,cmdfile):
+	def run_one_etl_step(self,etl_name,stepnum,steptablename,cmdfile,run_parameter=''):
 
-		script_variables = {'DB_TYPE':'','DB_USERNAME':'','DB_USERPWD':'','DB_HOST':'','DB_PORT':'','DB_NAME':'','DB_SCHEMA':''}
+		script_variables = {'DB_TYPE':'','DB_USERNAME':'','DB_USERPWD':'','DB_HOST':'','DB_PORT':'','DB_NAME':'','DB_SCHEMA':'','ARGV1':run_parameter}
 
 		findcmdfile = '.\\zetl_scripts\\' + etl_name + '\\' + cmdfile
 		try:
 			f = open(findcmdfile,'r') 
 			sqlfromfile = f.read()
+			sqlfromfile = sqlfromfile.replace('<ARGV1>',script_variables['ARGV1'])
 
 			f.close()
 		except Exception as e:
@@ -332,7 +336,7 @@ class zetl:
 
 		return return_value
 
-	def runetl(self,etl_name):
+	def runetl(self,etl_name,run_parameter=''):
 		if self.silent_on:
 			try:
 				os.remove(tempfilename)
@@ -356,14 +360,14 @@ class zetl:
 			#print('steptablename = \t' + steptablename)
 			#print('cmdfile = \t\t' + cmdfile)
 			if cmdfile.lower().endswith('.sql') or cmdfile.lower().endswith('.ddl'):
-				self.run_one_etl_step(etl_name,stepnum,steptablename,cmdfile)
+				self.run_one_etl_step(etl_name,stepnum,steptablename,cmdfile,run_parameter)
 
 			elif cmdfile.lower().endswith('.py'):
 
 				lid = self.logstepstart(etl_name,stepnum,cmdfile,steptablename,'Python script',0)
 
 				print('\n file ' + cmdfile + '\n')
-				cmd_to_run = 'py ' + foundfile
+				cmd_to_run = 'py ' + foundfile + ' ' + run_parameter
 				if self.silent_on:
 					cmd_to_run += ' > ' + tempfilename
 
@@ -388,7 +392,7 @@ class zetl:
 				lid = self.logstepstart(etl_name,stepnum,cmdfile,steptablename,'Windows bat script',0)
 
 				print('\n file ' + cmdfile + '\n')
-				cmd_to_run = foundfile
+				cmd_to_run = foundfile + ' ' + run_parameter
 				if self.silent_on:
 					cmd_to_run += ' > ' + tempfilename
 
@@ -620,7 +624,8 @@ class zetldbaccess:
 
 if __name__ == '__main__':
 	main()
-	#zetl().forcerun('LoadPostalCodes')
+
+	#zetl().proper_run('test','')
 
 		
 

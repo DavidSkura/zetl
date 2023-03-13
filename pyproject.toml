@@ -1,16 +1,23 @@
 [build-system]
-requires = ["hatchling","schemawizard_package"]
+requires = ["hatchling","schemawizard_package","postgresdave_package","mysqldave_package","garbledave_package"]
 
 build-backend = "hatchling.build"
 
 [project]
 name = "zetl"
-version = "1.0.9"
+version = "1.1.0"
+dependencies = [
+  'schemawizard_package >= 2.2.9',
+  'postgresdave_package >= 1.7.6',
+  'mysqldave_package >= 1.3.7',
+  'garbledave_package >= 1.0.0 '
+]
 authors = [
   { name="Dave Skura", email="dskura@gmail.com" },
 ]
 description = "A simple ETL framework for Python, SQL and BAT files which uses a Postgres database for activity logging."
 readme = "README.md"
+
 requires-python = ">=3.7"
 
 classifiers = [
