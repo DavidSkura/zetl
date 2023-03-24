@@ -8,6 +8,7 @@ the zetl framework requires python and Postgres to run.
 Download and install python (https://www.python.org/downloads/) to your local computer.
 
 ### 2. Install Postgres
+## zetl v2+ uses sqlite backend instead of postgres, so installing postgres is not mandatory.
 
 Download and install postgres (https://www.postgresql.org/download/) to your local computer.  Remember the password.  
 When you run zetl it will prompt you for database connection details.  At the end of prompting, it will ask if you want

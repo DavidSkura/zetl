@@ -1,9 +1,8 @@
 /*
   -- Dave Skura, 2022
-DB_TYPE		= MySQL
 
 */
-SELECT concat('Default connection MySQL',VERSION()) as label
+SELECT 'Default connection sqlite '||sqlite_version() as label
 	,CASE 
 		WHEN '<ARGV1>' = '' THEN 'No parameter Passed'
 	 ELSE
