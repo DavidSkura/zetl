@@ -68,7 +68,7 @@ class dbimport():
 
 if __name__ == '__main__':
 	# myexp = dbimport('sample.csv','sample8',True)
-	# tbl = schemawiz().createload_mysql_from_csv('CanadianPostalCodes.csv','thistbl')
+	# tbl = schemawiz().createload_sqlite_from_csv('CanadianPostalCodes.csv','thistbl')
 
 	main()
 
