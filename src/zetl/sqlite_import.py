@@ -6,10 +6,13 @@ from schemawizard_package.schemawizard import schemawiz
 
 def main():
 	if len(sys.argv) == 1 or sys.argv[1] == 'sqlite_import.py': # no parameters
-		print('usage: ')
+		print('usage: \n')
 		print('sqlite_import.py [csv_filename] [tablename] [WithTruncate]') 
 		print('')
-		print('bool WithTruncate = [True,False]')
+
+		print("\t - text csv_filename = 'anyfilename.csv'")
+		print("\t - text tablename = 'anytablename'")
+		print('\t - bool WithTruncate = [True,False]\n')
 
 	elif (len(sys.argv) == 2) : 
 		csv_filename = sys.argv[1]
@@ -46,7 +49,6 @@ class dbimport():
 			output_ddl_filename = 'z.' + self.getoutputfilename(csv_filename,tablename) + '.ddl'
 			tbl = dber.createload_sqlite_from_csv(csv_filename,tablename,output_ddl_filename)
 
-		print(dber.dbthings.sqlite_db.queryone('SELECT COUNT(*) FROM ' + tbl))
 		dber.dbthings.sqlite_db.close()
 
 		print(csv_filename + ' imported to ' + tbl)
@@ -67,8 +69,12 @@ class dbimport():
 		return newfile
 
 if __name__ == '__main__':
-	# myexp = dbimport('sample.csv','sample8',True)
-	# tbl = schemawiz().createload_sqlite_from_csv('CanadianPostalCodes.csv','thistbl')
+	#myexp = dbimport('sample.csv','thistbl',False)
+
+	#tbl = schemawiz().createload_sqlite_from_csv('sample.csv','thistbl')
+	#data = schemawiz().dbthings.sqlite_db.query('SELECT * FROM thistbl')
+	#for row in data:
+	#	print(row)
 
 	main()
 
