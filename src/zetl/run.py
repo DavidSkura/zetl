@@ -15,8 +15,9 @@ import re
 from datetime import *
 
 def main():
-
 	my_zetl = zetl()
+	#my_zetl.zetldb.load_thisfolder_to_zetl('f:\git\helloworld')
+	#sys.exit(0)
 	my_zetl.zetldb.empty_zetl()						# empty the master zetl table
 	my_zetl.zetldb.load_folders_to_zetl() # load master zetl table from folders
 	if len(sys.argv) == 1 or sys.argv[1] == 'run.py': # no parameters
@@ -47,6 +48,28 @@ class zetl:
 	def forcerun(self,etl_name_to_run,run_parameter=''):
 		self.force = True
 		self.proper_run(etl_name_to_run,run_parameter)
+
+	def force_folder_run(self,folder):
+		self.force = True
+		self.proper_folder_run(folder)
+
+	def proper_folder_run(self,folder):
+		print('Running ' + folder)
+		self.zetldb.load_thisfolder_to_zetl(folder) # 'f:\git\helloworld'
+		self.zetldb.export_thisfolder_zetl(folder)
+
+		activity = self.get_current_activity()
+		if activity == 'idle' or self.force:
+			self.execute('DELETE FROM z_activity')
+			self.execute("INSERT INTO z_activity(currently,previously) VALUES ('Running " + folder + "','" + activity + "')")
+
+			self.runfolderetl(folder)
+
+			self.execute("UPDATE z_activity SET currently = 'idle',previously='Running " + folder + "'")
+			self.commit()
+
+		else:
+			print("zetl is currently busy with '" + activity + "'.  You can wait for it to finish or call zetl.force_folder_run(folder).")
 
 	def proper_run(self,etl_name_to_run,run_parameter=''):
 		print('Running ' + etl_name_to_run)
@@ -334,6 +357,77 @@ class zetl:
 
 		return return_value
 
+	def runfolderetl(self,folder):
+		sql = """
+		SELECT stepnum,steptablename,cmdfile 
+		FROM z_etl 
+		WHERE etl_name = '""" + folder + """'
+		ORDER BY etl_name, stepnum
+		"""
+		#print(sql)
+		data = self.zetldb.db.query(sql)
+		for row in data:
+			consoleoutput = ''
+			stepnum = row[0]
+			steptablename = ''
+			if row[1]:
+				steptablename = row[1]
+
+			cmdfile = row[2]
+			foundfile = folder + '\\' + cmdfile
+			if cmdfile.lower().endswith('.sql') or cmdfile.lower().endswith('.ddl'):
+				self.run_one_etl_step(folder,stepnum,steptablename,cmdfile,'')
+
+			elif cmdfile.lower().endswith('.py'):
+
+				lid = self.logstepstart(folder,stepnum,cmdfile,steptablename,'Python script',0)
+
+				print('\n file ' + cmdfile + '\n')
+				cmd_to_run = 'py ' + foundfile + ' '
+				if self.silent_on:
+					cmd_to_run += ' > ' + tempfilename
+
+				print(cmd_to_run)
+				exit_code = os.system(cmd_to_run)
+
+				if self.silent_on:
+					f = open(tempfilename,'r')
+					consoleoutput = f.read()
+					f.close()
+
+				if exit_code != 0:
+					print(consoleoutput + '\n exit_code=' + str(exit_code))
+					self.log_script_error(lid,foundfile + ' failed with error_code ' + str(exit_code),self.zetldb.db.dbstr(),consoleoutput.strip())
+					self.logstepend(lid,0)
+
+					sys.exit(exit_code)
+
+				self.logstepend(lid,0,consoleoutput.strip(),self.zetldb.db.dbstr())
+
+			elif cmdfile.lower().endswith('.bat'):
+				lid = self.logstepstart(folder,stepnum,cmdfile,steptablename,'Windows bat script',0)
+
+				print('\n file ' + cmdfile + '\n')
+				cmd_to_run = foundfile + ' ' 
+				if self.silent_on:
+					cmd_to_run += ' > ' + tempfilename
+
+				exit_code = os.system(cmd_to_run)
+
+				if self.silent_on:
+					f = open(tempfilename,'r')
+					consoleoutput = f.read()
+					f.close()
+				
+				if exit_code != 0:
+					print(consoleoutput + '\n exit_code=' + str(exit_code))
+					self.log_script_error(lid,foundfile + ' failed with error_code ' + str(exit_code),self.zetldb.db.dbstr(),consoleoutput.strip())
+					self.logstepend(lid,0)
+
+					sys.exit(exit_code)
+
+				self.logstepend(lid,0,consoleoutput.strip(),self.zetldb.db.dbstr())
+
 	def runetl(self,etl_name,run_parameter=''):
 		if self.silent_on:
 			try:
@@ -435,7 +529,19 @@ class zetldbaccess:
 		self.db.connect()
 
 		self.version=2.0
-					
+
+	def export_thisfolder_zetl(self,folder):
+		zsql = ' SELECT DISTINCT etl_name FROM z_etl '
+		if folder != '':
+			zsql += "WHERE upper(etl_name) like upper('" + folder + "') "
+		zsql += ' ORDER BY etl_name '
+		etl_list = self.db.query(zsql)
+		for etl in etl_list:
+			etl_name = etl[0]
+			qry = "SELECT stepnum,cmdfile,steptablename,estrowcount FROM z_etl WHERE etl_name = '" + etl_name + "' ORDER BY stepnum"
+			csv_filename = folder + '\\z_etl.csv'
+			self.db.export_query_to_csv(qry,csv_filename)
+
 	def export_zetl(self,etl_name =''):
 		zsql = ' SELECT DISTINCT etl_name FROM z_etl '
 		if etl_name != '':
@@ -574,6 +680,33 @@ class zetldbaccess:
 		else:
 			return True
 
+	# sample folder: f:\git\project1
+	def load_thisfolder_to_zetl(self,folder):
+
+		for etl_script_file in os.listdir(folder):
+
+			if etl_script_file.endswith(".sql") or etl_script_file.endswith(".ddl") or etl_script_file.endswith(".py") or etl_script_file.endswith(".bat"):
+
+				# only interest in files that follow the namoing convention '#.name.suffix'
+				if len(etl_script_file.split('.')) == 3:
+					# eg 1.something.sql
+					
+					# file_suffix = something.sql
+					file_suffix = etl_script_file.split('.')[1] + '.' + etl_script_file.split('.')[2]
+					
+					# etl_step = 1
+					etl_step = etl_script_file.split('.')[0]
+
+					# etl_step must be a number
+					if self.is_an_int(etl_step):
+						
+						# only add if it doesn't exist already
+						if not self.etl_step_exists(folder,etl_step):
+
+							self.add_etl_step(folder,etl_step,etl_script_file)		
+
+
+
 	def load_folders_to_zetl(self,this_etl_name='all'):
 		etl_folder = 'zetl_scripts'
 		subdirs = [x[0] for x in os.walk(etl_folder)]
@@ -583,7 +716,7 @@ class zetldbaccess:
 				etl_name = possible_etl_dir.split('\\')[1]
 				if (this_etl_name == 'all' or etl_name == this_etl_name):
 					
-					dir_list = os.listdir(etl_folder + '\\' + etl_name)
+					#dir_list = os.listdir(etl_folder + '\\' + etl_name)
 					for etl_script_file in os.listdir(etl_folder + '\\' + etl_name):
 						if etl_script_file.endswith(".sql") or etl_script_file.endswith(".ddl") or etl_script_file.endswith(".py") or etl_script_file.endswith(".bat"):
 							if len(etl_script_file.split('.')) == 3:
