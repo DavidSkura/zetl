@@ -16,9 +16,7 @@ from datetime import *
 
 def main():
 	my_zetl = zetl()
-	#my_zetl.zetldb.load_thisfolder_to_zetl('f:\git\helloworld')
-	#sys.exit(0)
-	my_zetl.zetldb.empty_zetl()						# empty the master zetl table
+	my_zetl.zetldb.empty_zetl()						# empty the master zetl table	
 	my_zetl.zetldb.load_folders_to_zetl() # load master zetl table from folders
 	if len(sys.argv) == 1 or sys.argv[1] == 'run.py': # no parameters
 		print('')
@@ -62,7 +60,7 @@ class zetl:
 		if activity == 'idle' or self.force:
 			self.execute('DELETE FROM z_activity')
 			self.execute("INSERT INTO z_activity(currently,previously) VALUES ('Running " + folder + "','" + activity + "')")
-
+			
 			self.runfolderetl(folder)
 
 			self.execute("UPDATE z_activity SET currently = 'idle',previously='Running " + folder + "'")
@@ -176,11 +174,15 @@ class zetl:
 		except Exception as e:
 			print(str(e))
 
-	def run_one_etl_step(self,etl_name,stepnum,steptablename,cmdfile,run_parameter=''):
+	def run_one_etl_step(self,etl_name,stepnum,steptablename,cmdfile,run_parameter='',cmdfilename=''):
 
 		script_variables = {'DB_TYPE':'','DB_USERNAME':'','DB_USERPWD':'','DB_HOST':'','DB_PORT':'','DB_NAME':'','DB_SCHEMA':'','ARGV1':run_parameter}
 
-		findcmdfile = '.\\zetl_scripts\\' + etl_name + '\\' + cmdfile
+		if cmdfilename != '':
+			findcmdfile = cmdfilename
+		else:
+			findcmdfile = '.\\zetl_scripts\\' + etl_name + '\\' + cmdfile
+
 		try:
 			f = open(findcmdfile,'r') 
 			sqlfromfile = f.read()
@@ -358,6 +360,7 @@ class zetl:
 		return return_value
 
 	def runfolderetl(self,folder):
+		print(folder)
 		sql = """
 		SELECT stepnum,steptablename,cmdfile 
 		FROM z_etl 
@@ -376,7 +379,7 @@ class zetl:
 			cmdfile = row[2]
 			foundfile = folder + '\\' + cmdfile
 			if cmdfile.lower().endswith('.sql') or cmdfile.lower().endswith('.ddl'):
-				self.run_one_etl_step(folder,stepnum,steptablename,cmdfile,'')
+				self.run_one_etl_step(folder,stepnum,steptablename,cmdfile,'',folder + '\\' + cmdfile)
 
 			elif cmdfile.lower().endswith('.py'):
 
@@ -525,7 +528,7 @@ class zetl:
 class zetldbaccess:
 
 	def __init__(self):
-		self.db = sqlite_db('zetl.db')
+		self.db = sqlite_db()
 		self.db.connect()
 
 		self.version=2.0
@@ -541,6 +544,7 @@ class zetldbaccess:
 			qry = "SELECT stepnum,cmdfile,steptablename,estrowcount FROM z_etl WHERE etl_name = '" + etl_name + "' ORDER BY stepnum"
 			csv_filename = folder + '\\z_etl.csv'
 			self.db.export_query_to_csv(qry,csv_filename)
+
 
 	def export_zetl(self,etl_name =''):
 		zsql = ' SELECT DISTINCT etl_name FROM z_etl '
@@ -728,8 +732,6 @@ class zetldbaccess:
 
 if __name__ == '__main__':
 	main()
-
-	zetl().proper_run('test','')
 
 		
 

@@ -1,7 +1,7 @@
 """
   Dave Skura, Mar,2023
 """
-from run import zetl
+from zetl.run import zetl
 
 import warnings
 import sys
