@@ -43,6 +43,17 @@ def main():
 
 
 class zetl:
+	def __init__(self):
+		#now = (datetime.now())
+		#sztoday=str(now.year) + '-' + ('0' + str(now.month))[-2:] + '-' + str(now.day)
+		self.silent_on = False
+		self.tempfilename = 'zetl_pythonscript_temp.log'
+		self.singlefile_zetlname = 'zetl.zetl_this_file'
+
+		self.force = True
+
+		self.zetldb = zetldbaccess()
+
 	def forcerun(self,etl_name_to_run,run_parameter=''):
 		self.force = True
 		self.proper_run(etl_name_to_run,run_parameter)
@@ -51,6 +62,23 @@ class zetl:
 		self.force = True
 		self.proper_folder_run(folder)
 
+	def proper_file_run(self,filename):
+		self.zetldb.empty_zetl(self.singlefile_zetlname)		# empty the master zetl table
+		self.zetldb.load_thisfile_to_zetl(self.singlefile_zetlname,filename) # 'f:\git\helloworld'
+
+		activity = self.get_current_activity()
+		if activity == 'idle' or self.force:
+			self.execute('DELETE FROM z_activity')
+			self.execute("INSERT INTO z_activity(currently,previously) VALUES ('Running " + filename + "','" + activity + "')")
+			
+			self.run_file_etl(filename)
+
+			self.execute("UPDATE z_activity SET currently = 'idle',previously='Running " + filename + "'")
+			self.commit()
+
+		else:
+			print("zetl is currently busy with '" + activity + "'.  You can wait for it to finish or call zetl.force_folder_run(folder).")
+	
 	def proper_folder_run(self,folder):
 		print('Running ' + folder)
 		self.zetldb.load_thisfolder_to_zetl(folder) # 'f:\git\helloworld'
@@ -87,16 +115,6 @@ class zetl:
 
 		else:
 			print("zetl is currently busy with '" + activity + "'.  You can wait for it to finish or call zetl.forcerun(etlname,run_parameter).")
-
-	def __init__(self):
-		#now = (datetime.now())
-		#sztoday=str(now.year) + '-' + ('0' + str(now.month))[-2:] + '-' + str(now.day)
-		self.silent_on = False
-		self.tempfilename = 'zetl_pythonscript_temp.log'
-
-		self.force = True
-
-		self.zetldb = zetldbaccess()
 
 	def logstepstart(self,etl_name,stepnum,cmdfile,steptablename,query,ipart):
 
@@ -431,6 +449,52 @@ class zetl:
 
 				self.logstepend(lid,0,consoleoutput.strip(),self.zetldb.db.dbstr())
 
+	def run_file_etl(self,cmdfile,run_parameter=''):
+		etl_name = self.singlefile_zetlname
+		stepnum = '1'
+		steptablename = ''
+		consoleoutput=''
+		foundfile = cmdfile
+
+		if cmdfile.lower().endswith('.sql') or cmdfile.lower().endswith('.ddl'):
+			self.run_one_etl_step(etl_name,stepnum,steptablename,cmdfile,run_parameter,cmdfile)
+
+		elif cmdfile.lower().endswith('.py'):
+
+			lid = self.logstepstart(etl_name,stepnum,cmdfile,steptablename,'Python script',0)
+
+			print('\n file ' + cmdfile + '\n')
+			cmd_to_run = 'py ' + cmdfile + ' ' + run_parameter
+
+			print(cmd_to_run)
+			exit_code = os.system(cmd_to_run)
+
+			if exit_code != 0:
+				print(consoleoutput + '\n exit_code=' + str(exit_code))
+				self.log_script_error(lid,foundfile + ' failed with error_code ' + str(exit_code),self.zetldb.db.dbstr(),consoleoutput.strip())
+				self.logstepend(lid,0)
+
+				sys.exit(exit_code)
+
+			self.logstepend(lid,0,consoleoutput.strip(),self.zetldb.db.dbstr())
+
+		elif cmdfile.lower().endswith('.bat'):
+			lid = self.logstepstart(etl_name,stepnum,cmdfile,steptablename,'Windows bat script',0)
+
+			print('\n file ' + cmdfile + '\n')
+			cmd_to_run = cmdfile + ' ' + run_parameter
+
+			exit_code = os.system(cmd_to_run)
+			
+			if exit_code != 0:
+				print(consoleoutput + '\n exit_code=' + str(exit_code))
+				self.log_script_error(lid,foundfile + ' failed with error_code ' + str(exit_code),self.zetldb.db.dbstr(),consoleoutput.strip())
+				self.logstepend(lid,0)
+
+				sys.exit(exit_code)
+
+			self.logstepend(lid,0,consoleoutput.strip(),self.zetldb.db.dbstr())
+
 	def runetl(self,etl_name,run_parameter=''):
 		if self.silent_on:
 			try:
@@ -684,32 +748,50 @@ class zetldbaccess:
 		else:
 			return True
 
+	# sample folder: 1.this.sql
+	def load_thisfile_to_zetl(self,etl_name,etl_script_file):
+
+		if etl_script_file.endswith(".sql") or etl_script_file.endswith(".ddl") or etl_script_file.endswith(".py") or etl_script_file.endswith(".bat"):
+
+			# only interest in files that follow the namoing convention '#.name.suffix'
+			if len(etl_script_file.split('.')) == 3:
+				# eg 1.something.sql
+				
+				# file_suffix = something.sql
+				file_suffix = etl_script_file.split('.')[1] + '.' + etl_script_file.split('.')[2]
+				
+				# etl_step = 1
+				etl_step = etl_script_file.split('.')[0]
+
+				# etl_step must be a number
+				if self.is_an_int(etl_step):
+					
+					# only add if it doesn't exist already
+					if not self.etl_step_exists(etl_name,etl_step):
+
+						self.add_etl_step(etl_name,etl_step,etl_script_file)		
+
+
 	# sample folder: f:\git\project1
 	def load_thisfolder_to_zetl(self,folder):
-
 		for etl_script_file in os.listdir(folder):
+			# only interest in files that follow the namoing convention '#.name.suffix'
+			if len(etl_script_file.split('.')) == 3:
+				# eg 1.something.sql
+				
+				# file_suffix = something.sql
+				file_suffix = etl_script_file.split('.')[1] + '.' + etl_script_file.split('.')[2]
+				
+				# etl_step = 1
+				etl_step = etl_script_file.split('.')[0]
 
-			if etl_script_file.endswith(".sql") or etl_script_file.endswith(".ddl") or etl_script_file.endswith(".py") or etl_script_file.endswith(".bat"):
-
-				# only interest in files that follow the namoing convention '#.name.suffix'
-				if len(etl_script_file.split('.')) == 3:
-					# eg 1.something.sql
+				# etl_step must be a number
+				if self.is_an_int(etl_step):
 					
-					# file_suffix = something.sql
-					file_suffix = etl_script_file.split('.')[1] + '.' + etl_script_file.split('.')[2]
-					
-					# etl_step = 1
-					etl_step = etl_script_file.split('.')[0]
+					# only add if it doesn't exist already
+					if not self.etl_step_exists(folder,etl_step):
 
-					# etl_step must be a number
-					if self.is_an_int(etl_step):
-						
-						# only add if it doesn't exist already
-						if not self.etl_step_exists(folder,etl_step):
-
-							self.add_etl_step(folder,etl_step,etl_script_file)		
-
-
+						self.add_etl_step(folder,etl_step,etl_script_file)		
 
 	def load_folders_to_zetl(self,this_etl_name='all'):
 		etl_folder = 'zetl_scripts'

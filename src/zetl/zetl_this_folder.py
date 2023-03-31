@@ -12,10 +12,11 @@ from datetime import *
 my_zetl = zetl()
 
 def main():
-	if len(sys.argv) == 1 or sys.argv[1] == 'zetl_this.py': # no parameters
+	if len(sys.argv) == 1 or sys.argv[1] == 'zetl_this_folder.py': # no parameters
 		print('')
 		print('usage: ')
-		print('py -m zetl.zetl_this [folder] ') 
+		print('py -m zetl.zetl_this_folder [folder] ') 
+
 		print('-----------')
 
 	else: # run the etl match the etl_name in the etl table
