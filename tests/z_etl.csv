@@ -1,0 +1,6 @@
+etl_name	stepnum	steptablename	estrowcount	cmdfile	cmd_to_run	note	dtm
+backup	15.0	None	None	15.extract_csv_files.bat	None	None	None
+demo2	1.0	None	None	1.somethings.sql	None	None	None
+empty_log	1.0	None	None	1.truncate_zlog.sql	None	None	None
+demo3	1.0	None	None	1.tms.sql	None	None	None
+view_log	1.0	None	None	1.latest_log_view.sql	None	None	None

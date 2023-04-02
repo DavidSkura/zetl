@@ -7,7 +7,7 @@ DB_USERPWD  = **********
 DB_HOST		= localhost
 DB_PORT		= 3306
 DB_NAME		= nfldb
-DB_SCHEMA	= nfldb
+DB_SCHEMA	= not_used_for_mysql
 
 */
 

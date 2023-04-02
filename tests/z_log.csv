@@ -1,0 +1,3 @@
+id	dbuser	rundtm	etl_name	stepnum	part	steptablename	rowcount	starttime	endtime	cmd_to_run	script_output	script_error	cmdfile	database	dtm
+1	zetl.run	2023-04-01 02:01:29	backup	15.0	0		0	None	2023-04-01 02:01:29	Windows bat script		None	15.extract_csv_files.bat	Database=local_sqlite_db; version 3.38.4	None
+2	zetl.run	2023-04-01 02:02:19	backup	15.0	0		None	None	None	Windows bat script	None	None	15.extract_csv_files.bat	None	None
