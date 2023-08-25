@@ -1,2 +1,2 @@
 stepnum,cmdfile,steptablename,estrowcount
-1.0,1.check.sql,None,None
+1.0,1.another_mysqlcheck.sql,None,None

@@ -41,7 +41,6 @@ def main():
 
 	sys.exit(0)
 
-
 class zetl:
 	def __init__(self):
 		#now = (datetime.now())
@@ -98,6 +97,7 @@ class zetl:
 			print("zetl is currently busy with '" + activity + "'.  You can wait for it to finish or call zetl.force_folder_run(folder).")
 
 	def proper_run(self,etl_name_to_run,run_parameter=''):
+
 		print('Running ' + etl_name_to_run)
 		self.zetldb.load_folders_to_zetl(etl_name_to_run)
 		self.zetldb.export_zetl()
@@ -193,7 +193,6 @@ class zetl:
 			print(str(e))
 
 	def run_one_etl_step(self,etl_name,stepnum,steptablename,cmdfile,run_parameter='',cmdfilename=''):
-
 		script_variables = {'DB_TYPE':'','DB_USERNAME':'','DB_USERPWD':'','DB_HOST':'','DB_PORT':'','DB_NAME':'','DB_SCHEMA':'','ARGV1':run_parameter}
 
 		if cmdfilename != '':
@@ -325,6 +324,8 @@ class zetl:
 		if script_variables['DB_TYPE'] != '': # dont use default connection
 			if script_variables['DB_TYPE'].upper() == 'MYSQL':
 				qualified_table = steptablename
+				tblrowcount = dbconn.cur.rowcount
+
 			elif (script_variables['DB_TYPE'].upper() == 'POSTGRES'):
 				try:
 					this_table = steptablename.split('.')[1]
