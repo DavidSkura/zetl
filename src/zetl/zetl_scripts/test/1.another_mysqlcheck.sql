@@ -1,8 +1,9 @@
 /*
+SHOWQUERY	= False
   -- Dave Skura, 2022
 DB_TYPE		= MySQL
 DB_USERNAME	= dave
-DB_USERPWD  = **********
+DB_USERPWD  = 4165605869
 DB_HOST		= localhost
 DB_PORT		= 3306
 DB_NAME		= atlas

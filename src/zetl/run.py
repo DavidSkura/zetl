@@ -193,7 +193,7 @@ class zetl:
 			print(str(e))
 
 	def run_one_etl_step(self,etl_name,stepnum,steptablename,cmdfile,run_parameter='',cmdfilename=''):
-		script_variables = {'DB_TYPE':'','DB_USERNAME':'','DB_USERPWD':'','DB_HOST':'','DB_PORT':'','DB_NAME':'','DB_SCHEMA':'','ARGV1':run_parameter}
+		script_variables = {'SHOWQUERY':'True','DB_TYPE':'','DB_USERNAME':'','DB_USERPWD':'','DB_HOST':'','DB_PORT':'','DB_NAME':'','DB_SCHEMA':'','ARGV1':run_parameter}
 
 		if cmdfilename != '':
 			findcmdfile = cmdfilename
@@ -228,7 +228,9 @@ class zetl:
 				script_output = ''
 
 				print('\n file ' + cmdfile + ', step ' + str(ipart))
-				print(individual_query)
+				if script_variables['SHOWQUERY'].upper().strip() == 'TRUE':
+					print(individual_query)
+
 				#script_output += individual_query + '\n \n'
 
 				lid = self.logstepstart(etl_name,stepnum,cmdfile,steptablename,individual_query,ipart)
