@@ -5,7 +5,7 @@
 import os, sys
 import msvcrt
 import readchar
-from run import zetl
+from zetl.run import zetl
 
 
 def main():
@@ -19,9 +19,8 @@ def main():
 				print('SINGLE CHAR ENTRY.  Select from 0 to ' + str(option_count-1))
 				user_selection = int(readchar.readchar())
 			else:
-				user_msg = 'Select from 0 to ' + str(option_count-1)
-				user_selection = input(user_msg) or option_count
-				print("word entered: ", user_selection)
+				user_msg = 'Select from 0 to ' + str(option_count-1) + ' :'
+				user_selection = int(input(user_msg) or 0)
 
 			if user_selection == 0:
 				sys.exit(0)
